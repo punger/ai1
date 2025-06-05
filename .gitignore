@@ -1,0 +1,5 @@
+# Ignore Maven build output directory
+/target/
+
+# Ignore compiled class files
+**/*.class

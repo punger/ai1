@@ -5,9 +5,10 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Random;
+
+import static com.example.caesarandcleopatra.model.BustBag.BustPiece;
 
 /**
  * Represents the complete game state, including board patricians, played influence cards,
@@ -21,6 +22,7 @@ public class Game {
     private PatricianState patricianState;
     PatricianState getPatricianState() { return patricianState;}
 
+    public static final int MAX_HAND_SIZE = 6;
     // Each player's hand of cards
     private Map<Player, List<Card>> playerHands;
 
@@ -34,7 +36,7 @@ public class Game {
     private List<Card> discardPile;
 
     // Bag of Bust pieces for drawing during the game
-    private List<BustPiece> bustBag;
+    private BustBag bustBag;
 
     // Patrician card counts claimed by each player from Votes of Confidence
     private Map<Player, Map<PatricianCard.Type, Integer>> playerPatricians;
@@ -62,7 +64,7 @@ public class Game {
     }
     /**
      * Constructs a new Game, initializing all components:
-     * - Board patricians
+     * - Bored patricians
      * - Played influence card mappings
      * - Player hands and action/influence decks
      * - Discard pile
@@ -94,7 +96,7 @@ public class Game {
         discardPile            = new ArrayList<>();
 
         // Initialize bust bag with one of each BustPiece
-        bustBag = new ArrayList<>(Arrays.asList(BustPiece.values()));
+        bustBag = new BustBag(shuffler);
 
         // Initialize claimed patrician counts per player
         playerPatricians = new HashMap<>();
@@ -107,12 +109,14 @@ public class Game {
         }
     }
 
-    public Card draw(Player p, boolean isInfluence) {
+    public boolean draw(Player p, boolean isInfluence) {
+        if (playerHands.get(p).size() >= MAX_HAND_SIZE) return false;
         if (isInfluence) {
-            return playerInfluenceDecks.get(p).removeLast();
+            playerHands.get(p).add(playerInfluenceDecks.get(p).removeLast());
         } else {
-            return playerActionDecks.get(p).removeLast();
+            playerHands.get(p).add(playerActionDecks.get(p).removeLast());
         }
+        return true;
     }
     // Methods to handle played influence cards
     /**
@@ -127,42 +131,7 @@ public class Game {
         patricianState.addInfluence(patricianType, player, influenceCard, faceUp);
     }
 
-    // Methods for player hands management
-    /**
-     * Adds a Card to a player's hand.
-     *
-     * @param player the player receiving the card
-     * @param card the Card to add
-     */
-    public void addCardToPlayerHand(Player player, Card card) {
-        playerHands.computeIfAbsent(player, k -> new ArrayList<>()).add(card);
-    }
-
-    /**
-     * Returns each player's current hand of cards.
-     *
-     * @return map of Player to list of Card
-     */
-    public Map<Player, List<Card>> getPlayerHands() {
-        return playerHands;
-    }
-
-
-    /**
-     * Returns the Influence decks for all players.
-     *
-     * @return map of Player to list of InfluenceCard
-     */
-    public Map<Player, List<InfluenceCard>> getPlayerInfluenceDecks() {
-        return playerInfluenceDecks;
-    }
-
     // Methods for discard pile management
-    /**
-     * Discards a Card by adding it to the discard pile.
-     *
-     * @param card the Card to discard
-     */
     /**
      * Discards a Card by adding it to the discard pile. Ignores null cards.
      *
@@ -176,32 +145,12 @@ public class Game {
     }
 
     /**
-     * Returns the discard pile contents.
-     *
-     * @return list of discarded cards
-     */
-    public List<Card> getDiscardPile() {
-        return discardPile;
-    }
-
-    /**
      * Draws a random BustPiece from the bag and removes it.
      *
      * @return the drawn BustPiece
      */
     public BustPiece drawBust() {
-        Random rnd = new Random();
-        int idx = rnd.nextInt(bustBag.size());
-        return bustBag.remove(idx);
-    }
-
-    /**
-     * Returns a BustPiece back into the bag.
-     *
-     * @param piece the BustPiece to return
-     */
-    public void returnBust(BustPiece piece) {
-        bustBag.add(piece);
+        return bustBag.draw();
     }
 
     /**
@@ -210,7 +159,7 @@ public class Game {
      * @return list of remaining BustPieces in the bag
      */
     public List<BustPiece> getBustBag() {
-        return bustBag;
+        return bustBag.getContents();
     }
 
     /**
