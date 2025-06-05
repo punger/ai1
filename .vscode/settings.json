@@ -1,0 +1,16 @@
+{
+  // Point VS Code’s Java language server to your Java 21 JDK
+  "java.jdt.ls.java.home": "C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.7.6-hotspot",
+
+  // Register Java 21 as a runtime so project compliance matches
+  "java.configuration.runtimes": [
+
+    {
+      "name": "JavaSE-21",
+      "path": "C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.7.6-hotspot"
+    }
+  ],
+  "java.completion.chain.enabled": true,
+  "java.referencesCodeLens.enabled": true,
+  "java.implementationCodeLens": "all"
+}
