@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Caesar & Cleopatra</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- JQuery CDN for future UI work -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f5f5dc;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background: #8b5c2a;
+            color: #fff;
+            padding: 1em;
+            text-align: center;
+        }
+        main {
+            margin: 2em auto;
+            max-width: 600px;
+            background: #fffbe6;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 2em;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Caesar & Cleopatra</h1>
+        <p>Welcome to the game!</p>
+    </header>
+    <main>
+        <section id="scoreboard" style="margin-bottom:1.5em;">
+            <h2>Score</h2>
+            <div id="scores">
+                <span id="player1-score">Player 1: 0</span> &nbsp;|&nbsp;
+                <span id="player2-score">Player 2: 0</span>
+            </div>
+        </section>
+        <section id="patrician-board" style="margin-bottom:1.5em;">
+            <h2>Patrician Board</h2>
+            <div id="patrician-board-area">
+                <!-- Patrician board cards will be displayed here -->
+            </div>
+        </section>
+        <section id="player-hand" style="margin-bottom:1.5em;">
+            <h2>Your Hand</h2>
+            <div id="hand-area">
+                <!-- Player's hand cards will be displayed here -->
+            </div>
+        </section>
+        <section id="decks-discard-bust" style="display:flex; gap:1em; justify-content:space-between;">
+            <div id="action-deck-area">
+                <h3>Action Deck</h3>
+                <div id="action-deck">
+                    <!-- Action deck cards -->
+                </div>
+            </div>
+            <div id="influence-deck-area">
+                <h3>Influence Deck</h3>
+                <div id="influence-deck">
+                    <!-- Influence deck cards -->
+                </div>
+            </div>
+            <div id="discard-pile-area">
+                <h3>Discard Pile</h3>
+                <div id="discard-pile">
+                    <!-- Discarded cards -->
+                </div>
+            </div>
+            <div id="bust-bag-area">
+                <h3>Bust Bag</h3>
+                <div id="bust-bag">
+                    <!-- Bust tokens -->
+                </div>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

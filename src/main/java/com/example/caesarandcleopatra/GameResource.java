@@ -16,10 +16,12 @@ import com.example.caesarandcleopatra.model.PatricianState.InfluenceCardState;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import com.example.caesarandcleopatra.model.*;;
+import com.example.caesarandcleopatra.model.*;
+
+import jakarta.enterprise.context.ApplicationScoped;
 
 @Path("/game")
-@Singleton
+@ApplicationScoped
 public class GameResource {
 
     private Game persistentGame;
