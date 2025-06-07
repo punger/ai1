@@ -8,7 +8,7 @@ package com.example.caesarandcleopatra.model;
  */
 public record ActionCard(String id, Type type) implements Card {
 
-    enum Type {
+    public enum Type {
         /**
          * ASSASSINATION: removes a specified opponent's played Influence card
          * from the board and discards it.

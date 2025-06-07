@@ -2,7 +2,7 @@ package com.example.caesarandcleopatra.model;
 
 public record InfluenceCard(String id, Type type) implements Card {
 
-    enum Type {
+    public enum Type {
         ONE(1, 5),
         TWO(2, 5),
         THREE(3, 5),
@@ -31,5 +31,5 @@ public record InfluenceCard(String id, Type type) implements Card {
     public int getCount() {
         return type.getCount();
     }
-    int getValue() {return type.value;}
+    public int getValue() {return type.value;}
 }

@@ -1,11 +1,11 @@
 package com.example.caesarandcleopatra.model;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import com.example.caesarandcleopatra.model.PatricianCard.Type;
 
@@ -18,9 +18,16 @@ import java.util.Comparator;
 public class PatricianState {
     private final Game game;
     private final Map<PatricianCard.Type, Map<Player, InfluenceList>> playedInfluence = new HashMap<>();
+    // public Map<PatricianCard.Type, Map<Player, InfluenceList>> getPlayedInfluence() {
+    //     return playedInfluence;
+    // }
+
     private final Map<PatricianCard.Type, Integer> boardState = new HashMap<>();
 
-    private class InfluenceCardState {
+    public Map<PatricianCard.Type, Integer> getBoardState() {
+        return boardState;
+    }
+    public class InfluenceCardState {
         private final InfluenceCard card;
         private boolean faceUp = false;
         InfluenceCardState(InfluenceCard card, boolean isFaceUp) {
@@ -32,11 +39,11 @@ public class PatricianState {
         }
         void setFaceDown() {faceUp = false;}
         void setFaceUp() {faceUp = true;}
-        boolean isFaceUp() {return faceUp;}
-        InfluenceCard getCard() { return card;}
-        int getValue() {return card.getValue();}
+        public boolean isFaceUp() {return faceUp;}
+        public InfluenceCard getCard() { return card;}
+        public int getValue() {return card.getValue();}
     }
-    private class InfluenceList implements Comparable<InfluenceList> {
+    public class InfluenceList implements Comparable<InfluenceList> {
         private final ArrayList<InfluenceCardState> influencers = new ArrayList<>();
         private int numPhilosophers = 0;
 
@@ -78,7 +85,7 @@ public class PatricianState {
             InfluenceCardState card = influencers.stream().max(Comparator.comparing(InfluenceCardState::getValue)).get();
             return removeCard(card);
         }
-        List<InfluenceCardState> getList() {return influencers;}
+        public List<InfluenceCardState> getList() {return influencers;}
         void clear() {
             numPhilosophers = 0;
             influencers.clear();
@@ -96,6 +103,7 @@ public class PatricianState {
         }
     }
 
+    private static final int MAX_INFLUENCERS_PER_PLAYER_PATRICIAN = 5;
     /**
      * Adds a played InfluenceCard against the specified Patrician group.
      *
@@ -103,9 +111,12 @@ public class PatricianState {
      * @param player  the player who played the card
      * @param card    the InfluenceCard played
      * @param faceUp  whether the card is face-up
+     * @return true if the influence card was permitted to be added
      */
-    public void addInfluence(PatricianCard.Type type, Player player, InfluenceCard card, boolean faceUp) {
+    public boolean addInfluence(PatricianCard.Type type, Player player, InfluenceCard card, boolean faceUp) {
+        if (playedInfluence.get(type).get(player).getList().size() >= MAX_INFLUENCERS_PER_PLAYER_PATRICIAN) return false;
         playedInfluence.get(type).get(player).addCard(card, faceUp);
+        return true;
     }
 
     /**
@@ -176,13 +187,6 @@ public class PatricianState {
         }
         return winner;
     }
-    /**
-     * @param player the player whose cards to retrieve
-     * @return list of PlayedInfluenceCard
-     */
-    public List<InfluenceCardState> getPlayedInfluence(PatricianCard.Type type, Player player) {
-        return Collections.unmodifiableList(playedInfluence.get(type).get(player).getList());
-    }
 
     public List<InfluenceCard> clearInfluence(PatricianCard.Type patrician) {
         LinkedList<InfluenceCardState> removed = new LinkedList<>();
@@ -199,5 +203,25 @@ public class PatricianState {
         InfluenceList playersInfluence = playedInfluence.get(patrician).get(player);
         playersInfluence.clear();
         replacementCards.forEach(c -> playersInfluence.addCard(c, false));
+    }
+
+    private final static int SPECIAL_VOC_THRESHOLD = 8;
+    public PatricianCard.Type getSpecialVOC() {
+        return playedInfluence.entrySet().stream()
+            .filter(e -> 
+                e.getValue().values().stream()
+                    .mapToInt( il -> il.influencers.size()).sum() >= SPECIAL_VOC_THRESHOLD
+            )
+            .map(Entry::getKey)
+            .findFirst()
+            .orElse(null);
+    }
+    public int getRemainingCount(Type type) {
+        return boardState.get(type);
+    }
+    
+    // public Map<PatricianCard.Type, Map<Player, InfluenceList>> getPlayedInfluence() {
+    public List<InfluenceCardState> getPlayedInfluence(Type type, Player player) {
+        return playedInfluence.get(type).get(player).getList();
     }
 }

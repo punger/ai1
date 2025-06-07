@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- If cached resolution issues persist, run "mvn clean install -U" -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" 
+<project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
-         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.example</groupId>
@@ -14,18 +14,16 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>21</maven.compiler.source>
     <maven.compiler.target>21</maven.compiler.target>
-    <!-- Updated version to one that is available in Maven Central -->
-    <quarkus.group-id>io.quarkus</quarkus.group-id>
-    <quarkus.artifact-id>quarkus-bom</quarkus.artifact-id>
     <quarkus.version>3.10.1</quarkus.version>
+    <junit.jupiter.version>5.9.3</junit.jupiter.version>
   </properties>
 
   <dependencyManagement>
     <dependencies>
-      <!-- Import the Quarkus BOM using the updated version -->
+      <!-- Import the Quarkus BOM -->
       <dependency>
-        <groupId>${quarkus.group-id}</groupId>
-        <artifactId>${quarkus.artifact-id}</artifactId>
+        <groupId>io.quarkus</groupId>
+        <artifactId>quarkus-bom</artifactId>
         <version>${quarkus.version}</version>
         <type>pom</type>
         <scope>import</scope>
@@ -34,27 +32,35 @@
   </dependencyManagement>
 
   <dependencies>
-    <!-- Quarkus RESTEasy Reactive for building RESTful services with Jakarta -->
+    <!-- Quarkus RESTEasy Reactive -->
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-resteasy-reactive</artifactId>
     </dependency>
-    <!-- Explicit Jakarta JAX-RS API dependency -->
+    <!-- Jakarta JAX-RS API -->
     <dependency>
       <groupId>jakarta.ws.rs</groupId>
       <artifactId>jakarta.ws.rs-api</artifactId>
       <version>3.1.0</version>
       <scope>provided</scope>
     </dependency>
-    
-    <!-- Jackson integration for JSON handling -->
+    <!-- Jackson JSON support -->
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-resteasy-reactive-jackson</artifactId>
     </dependency>
+    <!-- JUnit 5 API and Engine -->
     <dependency>
-      <groupId>jakarta.ws.rs</groupId>
-      <artifactId>jakarta.ws.rs-api</artifactId>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>${junit.jupiter.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>${junit.jupiter.version}</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -67,12 +73,21 @@
         <executions>
           <execution>
             <goals>
-              <!-- <goal>generate-code</goal>
-              <goal>generate-code-tests</goal> -->
               <goal>build</goal>
             </goals>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.0.0-M7</version>
+        <configuration>
+          <useModulePath>false</useModulePath>
+          <systemPropertyVariables>
+            <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+          </systemPropertyVariables>
+        </configuration>
       </plugin>
     </plugins>
   </build>

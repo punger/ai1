@@ -6,7 +6,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.Random;
+import java.util.Optional;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import static com.example.caesarandcleopatra.model.BustBag.BustPiece;
 
@@ -20,7 +24,7 @@ public class Game {
 
     // Encapsulates patrician board and played influence state
     private PatricianState patricianState;
-    PatricianState getPatricianState() { return patricianState;}
+    public PatricianState getPatricianState() { return patricianState;}
 
     public static final int MAX_HAND_SIZE = 6;
     // Each player's hand of cards
@@ -42,7 +46,7 @@ public class Game {
     private Map<Player, Map<PatricianCard.Type, Integer>> playerPatricians;
 
     // Generic deck generator for any card type
-    private static <E, C> Map<Player, List<C>> generateDecks(E[] types, java.util.function.Function<E, Integer> countFn, java.util.function.BiFunction<String, E, C> creator) {
+    private static <E, C> Map<Player, List<C>> generateDecks(E[] types, Function<E, Integer> countFn, BiFunction<String, E, C> creator) {
         Map<Player, List<C>> map = new HashMap<>();
         for (Player p : Player.values()) {
             List<C> deck = new LinkedList<>();
@@ -93,7 +97,7 @@ public class Game {
             hand.add(new ActionCard(ActionCard.Type.VETO.name(), ActionCard.Type.VETO));
             playerHands.put(p, hand);
         }
-        discardPile            = new ArrayList<>();
+        discardPile            = new LinkedList<>();
 
         // Initialize bust bag with one of each BustPiece
         bustBag = new BustBag(shuffler);
@@ -101,7 +105,7 @@ public class Game {
         // Initialize claimed patrician counts per player
         playerPatricians = new HashMap<>();
         for (Player p : Player.values()) {
-            Map<PatricianCard.Type, Integer> counts = new java.util.EnumMap<>(PatricianCard.Type.class);
+            Map<PatricianCard.Type, Integer> counts = new EnumMap<>(PatricianCard.Type.class);
             for (PatricianCard.Type t : PatricianCard.Type.values()) {
                 counts.put(t, 0);
             }
@@ -170,6 +174,34 @@ public class Game {
     public Map<Player, Map<PatricianCard.Type, Integer>> getPlayerPatricianCounts() {
         return playerPatricians;
     }
+/**
+     * Returns the current hands for each player.
+     *
+     * @return unmodifiable map of Player to their hand cards
+     */
+    public Map<Player, List<Card>> getPlayerHands() {
+        return Collections.unmodifiableMap(playerHands);
+    }
+
+    /**
+     * Returns the count of remaining cards in the player's influence deck.
+     *
+     * @param player the player
+     * @return size of influence deck
+     */
+    public int getInfluenceDeckCount(Player player) {
+        return playerInfluenceDecks.get(player).size();
+    }
+
+    /**
+     * Returns the count of remaining cards in the player's action deck.
+     *
+     * @param player the player
+     * @return size of action deck
+     */
+    public int getActionDeckCount(Player player) {
+        return playerActionDecks.get(player).size();
+    }
 
     /**
      * Resolves a Vote of Confidence (VOC) for the specified Patrician group,
@@ -185,5 +217,23 @@ public class Game {
             counts.put(type, counts.getOrDefault(type, 0) + 1);
         }
         return winner;
+    }
+
+    public void handleVeto(Player p, ActionCard action, boolean drewFromInfluence) {
+        // Discard the player's played action card
+        playerHands.get(p).remove(action);
+        // Remove the VETO card from the opponent's hand
+        List<Card> opponentHand = playerHands.get(p.opponent());
+        Optional<ActionCard> opponentAction = opponentHand.stream()
+            .filter(c -> c instanceof ActionCard)
+            .map( c -> (ActionCard) c)
+            .filter(ac -> ac.type().equals(ActionCard.Type.VETO))
+            .findFirst();
+        opponentAction.ifPresent(c -> {
+            opponentHand.remove(c);
+            discard(c);
+        });
+        // Draw a replacement card for the vetoing player
+        draw(p, drewFromInfluence);
     }
 }

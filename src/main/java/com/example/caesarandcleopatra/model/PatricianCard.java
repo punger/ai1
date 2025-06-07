@@ -2,7 +2,7 @@ package com.example.caesarandcleopatra.model;
 
 public record PatricianCard(String id, Type type, String name) implements Card {
 
-    enum Type {
+    public enum Type {
         PRAETOR(5, "blue"),
         AEDILE(5, "green"),
         CONSUL(3, "white"),

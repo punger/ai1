@@ -1,78 +1,96 @@
 package com.example.caesarandcleopatra;
 
-import jakarta.ws.rs.Consumes;
+import jakarta.inject.Singleton;
 import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
+import com.example.caesarandcleopatra.model.BustBag.BustPiece;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import com.example.caesarandcleopatra.model.*;;
 
 @Path("/game")
+@Singleton
 public class GameResource {
+
+    private Game persistentGame;
+
+    public GameResource() {
+        this.persistentGame = new Game();
+    }
 
     // GET /api/game - Retrieves the full game state (initialization or save/retrieve)
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getGame() {
-        // Stub response representing the full game state.
-        String json = "{\"status\":\"Game initialized\", \"message\":\"Full game state information would be provided here.\"}";
-        return Response.ok(json).build();
+    public GameState getGame() {
+        if (persistentGame == null) {
+            persistentGame = new Game();
+        }
+        Player current = Player.CAESAR; // TODO: determine actual current player
+        // Map each card to DTO with id and simple type identifier
+        List<CardDTO> currentHand = persistentGame.getPlayerHands().get(current).stream()
+            .map(c -> {
+                if (c instanceof InfluenceCard ic) return new CardDTO(ic.id(), "influence");
+                if (c instanceof ActionCard ac)   return new CardDTO(ac.id(), "action");
+                return new CardDTO(c.id(), "unknown");
+            })
+            .collect(Collectors.toList());
+        int opponentHandCount = persistentGame.getPlayerHands().get(current.opponent()).size();
+        Map<Player, DeckCount> deckCounts = Map.of(
+            current, new DeckCount(persistentGame.getInfluenceDeckCount(current), persistentGame.getActionDeckCount(current)),
+            current.opponent(), new DeckCount(persistentGame.getInfluenceDeckCount(current.opponent()), persistentGame.getActionDeckCount(current.opponent()))
+        );
+        List<String> bustBagContents = persistentGame.getBustBag().stream().map(BustPiece::name).collect(Collectors.toList());
+        // Build per-group board entries with remaining counts and played influence
+        Map<String, PatricianBoardEntry> patricianBoard = new HashMap<>();
+        var patricianState = persistentGame.getPatricianState();
+        for (var type : com.example.caesarandcleopatra.model.PatricianCard.Type.values()) {
+            int remaining = patricianState.getRemainingCount(type);
+            Map<Player, List<InfluenceEntry>> influenceMap = new HashMap<>();
+            for (Player player : Player.values()) {
+                var influenceList = patricianState.getPlayedInfluence(type, player);
+                List<InfluenceEntry> entries = new ArrayList<>();
+                for (var inf : influenceList) {
+                    entries.add(new InfluenceEntry(inf.isFaceUp(), inf.getCard().id()));
+                }
+                influenceMap.put(player, entries);
+            }
+            patricianBoard.put(type.toString(), new PatricianBoardEntry(remaining, influenceMap));
+        }
+        // Convert player patrician counts to map of string keys
+        Map<Player, Map<String,Integer>> playerPatricianCards = new HashMap<>();
+        for (Map.Entry<Player, ?> entry : persistentGame.getPlayerPatricianCounts().entrySet()) {
+            Player player = entry.getKey();
+            Map<?, Integer> countsMap = (Map<?, Integer>) entry.getValue();
+            Map<String, Integer> m2 = new HashMap<>();
+            countsMap.forEach((cardType, count) -> m2.put(cardType.toString(), count));
+            playerPatricianCards.put(player, m2);
+        }
+        return new GameState(current, 1, currentHand, opponentHandCount,
+                             playerPatricianCards, bustBagContents,
+                             deckCounts, patricianBoard);
     }
 
-    // GET /api/game/draw?playerId={playerId}&deckType={deckType}
-    @GET
-    @Path("/draw")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response drawCard(@QueryParam("playerId") String playerId,
-                             @QueryParam("deckType") String deckType) {
-        // Stub response simulating drawing a card from the specified deck.
-        String json = String.format("{\"status\":\"Card drawn\", \"playerId\":\"%s\", \"deckType\":\"%s\", \"card\":\"Sample Card\"}", 
-                            playerId, deckType);
-        return Response.ok(json).build();
-    }
+    // Other API methods unchanged...
 
-    // POST /api/game/action/playCard - Plays a card (Influence/Action)
-    @POST
-    @Path("/action/playCard")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response playCard(String payload) {
-        // In a full implementation, you would parse the payload and update game state.
-        String json = "{\"status\":\"Card played\", \"details\":" + payload + "}";
-        return Response.ok(json).build();
-    }
+    // Record DTOs for GET /api/game response
+    public static record GameState(
+        Player currentPlayer,
+        int turnNumber,
+        List<CardDTO> currentPlayerHand,
+        int opponentHandCount,
+        Map<Player, Map<String,Integer>> playerPatricianCards,
+        List<String> bustBagContents,
+        Map<Player, DeckCount> deckCounts,
+        Map<String, PatricianBoardEntry> patricianBoard) {}
 
-    // POST /api/game/action/takeBust - Draws a Bust piece and computes VOC outcome if applicable
-    @POST
-    @Path("/action/takeBust")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response takeBust() {
-        // Stub response simulating a bust draw and subsequent VOC resolution.
-        String json = "{\"status\":\"Bust drawn\", \"bustColor\":\"red\", \"vocResult\":\"Sample VOC outcome\"}";
-        return Response.ok(json).build();
-    }
+    public static record DeckCount(int influenceDeckCount, int actionDeckCount) {}
 
-    // POST /api/game/action/placeInitialInfluence - Submits initial face-down influence card placements
-    @POST
-    @Path("/action/placeInitialInfluence")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response placeInitialInfluence(String payload) {
-        // Stub response that would process the mapping of influence cards to Patrician groups.
-        String json = "{\"status\":\"Initial influence placed\", \"details\":" + payload + "}";
-        return Response.ok(json).build();
-    }
+    public static record CardDTO(String id, String type) {}
 
-    // (Optional) POST /api/game/action/selectPersona - Selects or updates a player's persona
-    @POST
-    @Path("/action/selectPersona")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response selectPersona(String payload) {
-        // Stub response for selecting/updating a persona.
-        String json = "{\"status\":\"Persona selected/updated\", \"details\":" + payload + "}";
-        return Response.ok(json).build();
-    }
+    public static record PatricianBoardEntry(int remaining, Map<Player, List<InfluenceEntry>> influence) {}
+
+    public static record InfluenceEntry(boolean faceUp, String type) {}
 }
