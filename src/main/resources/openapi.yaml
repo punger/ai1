@@ -1,0 +1,202 @@
+openapi: 3.0.3
+info:
+  title: Caesar and Cleopatra Game API
+  version: 1.0.0
+  description: REST API for Caesar and Cleopatra game backend
+paths:
+  /game:
+    get:
+      summary: Retrieve the full game state
+      operationId: getGame
+      responses:
+        '200':
+          description: Full game state returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameState'
+  /game/draw:
+    get:
+      summary: Draw a card from a specified deck
+      operationId: drawCard
+      parameters:
+        - name: playerId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: deckType
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Card drawn response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  playerId:
+                    type: string
+                  deckType:
+                    type: string
+                  card:
+                    type: string
+  /game/action/playCard:
+    post:
+      summary: Play a card (Influence/Action)
+      operationId: playCard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Card played response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  details:
+                    type: object
+  /game/action/takeBust:
+    post:
+      summary: Draw a Bust piece and compute VOC outcome
+      operationId: takeBust
+      responses:
+        '200':
+          description: Bust drawn response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  bustColor:
+                    type: string
+                  vocResult:
+                    type: string
+  /game/action/placeInitialInfluence:
+    post:
+      summary: Submit initial face-down influence card placements
+      operationId: placeInitialInfluence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Initial influence placed response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  details:
+                    type: object
+  /game/action/selectPersona:
+    post:
+      summary: Select or update a player's persona
+      operationId: selectPersona
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Persona selected/updated response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  details:
+                    type: object
+components:
+  schemas:
+    GameState:
+      type: object
+      properties:
+        currentPlayer:
+          $ref: '#/components/schemas/Player'
+        turnNumber:
+          type: integer
+        currentPlayerHand:
+          type: array
+          items:
+            $ref: '#/components/schemas/CardDTO'
+        opponentHandCount:
+          type: integer
+        playerPatricianCards:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: integer
+        bustBagContents:
+          type: array
+          items:
+            type: string
+        deckCounts:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/DeckCount'
+        patricianBoard:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/PatricianBoardEntry'
+    Player:
+      type: string
+      enum:
+        - CAESAR
+        - CLEOPATRA
+    CardDTO:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+    DeckCount:
+      type: object
+      properties:
+        influenceDeckCount:
+          type: integer
+        actionDeckCount:
+          type: integer
+    PatricianBoardEntry:
+      type: object
+      properties:
+        remaining:
+          type: integer
+        influence:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/InfluenceEntry'
+    InfluenceEntry:
+      type: object
+      properties:
+        faceUp:
+          type: boolean
+        type:
+          type: string
