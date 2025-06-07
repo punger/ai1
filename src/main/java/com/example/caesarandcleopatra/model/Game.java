@@ -38,7 +38,7 @@ public class Game {
 
     // Discard pile for cards
     private List<Card> discardPile;
-
+    public List<Card> getDiscards() { return discardPile;}
     // Bag of Bust pieces for drawing during the game
     private BustBag bustBag;
 
@@ -113,14 +113,16 @@ public class Game {
         }
     }
 
-    public boolean draw(Player p, boolean isInfluence) {
-        if (playerHands.get(p).size() >= MAX_HAND_SIZE) return false;
+    public Card draw(Player p, boolean isInfluence) {
+        if (playerHands.get(p).size() >= MAX_HAND_SIZE) return null;
+        Card drawn;
         if (isInfluence) {
-            playerHands.get(p).add(playerInfluenceDecks.get(p).removeLast());
+            drawn = playerInfluenceDecks.get(p).removeLast();
         } else {
-            playerHands.get(p).add(playerActionDecks.get(p).removeLast());
+            drawn = playerActionDecks.get(p).removeLast();
         }
-        return true;
+        playerHands.get(p).add(drawn);
+        return drawn;
     }
     // Methods to handle played influence cards
     /**

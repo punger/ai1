@@ -51,8 +51,8 @@ public record ActionCard(String id, Type type) implements Card {
         CASTLING(1, (game, player, context) -> {
             PatricianCard.Type t1 = context.getPatricianType1();
             PatricianCard.Type t2 = context.getPatricianType2();
-            game.getPatricianState().replace(player, t1, context.getRedistributedCardsForType1());
-            game.getPatricianState().replace(player, t2, context.getRedistributedCardsForType2());
+            game.getPatricianState().replaceInfluence(player, t1, context.getRedistributedCardsForType1());
+            game.getPatricianState().replaceInfluence(player, t2, context.getRedistributedCardsForType2());
         }),
         /**
          * VETO: negates the opponent's last ActionCard effect, discarding both

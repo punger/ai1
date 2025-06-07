@@ -13,5 +13,8 @@
   "java.completion.chain.enabled": true,
   "java.referencesCodeLens.enabled": true,
   "java.implementationCodeLens": "all",
-  "java.configuration.updateBuildConfiguration": "interactive"
+  "java.configuration.updateBuildConfiguration": "interactive",
+  "java.test.config": {
+        "vmArgs": ["-Djava.util.logging.manager=org.jboss.logmanager.LogManager"]
+}
 }

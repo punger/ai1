@@ -75,16 +75,30 @@ public class PatricianState {
             if (influencers.isEmpty() || 
                     influencers.stream().allMatch(ics -> ics.getCard().type().equals(InfluenceCard.Type.PHILOSOPHER))) 
                 return null;
-            InfluenceCardState card = influencers.stream().min(Comparator.comparing(InfluenceCardState::getValue)).get();
+            InfluenceCardState card = influencers.stream()
+                    .filter(c -> c.getCard().type() != InfluenceCard.Type.PHILOSOPHER)
+                    .max(Comparator.comparing(InfluenceCardState::getValue)).get();
             return removeCard(card);
         }
         InfluenceCard removeMin() {
             if (influencers.isEmpty() || 
                     influencers.stream().allMatch(ics -> ics.getCard().type().equals(InfluenceCard.Type.PHILOSOPHER))) 
                 return null;
-            InfluenceCardState card = influencers.stream().max(Comparator.comparing(InfluenceCardState::getValue)).get();
+            InfluenceCardState card = 
+                influencers.stream()
+                    .filter(c -> c.getCard().type() != InfluenceCard.Type.PHILOSOPHER)
+                    .min(Comparator.comparing(InfluenceCardState::getValue)).get();
             return removeCard(card);
         }
+        InfluenceCard removePhilosopher() {
+            for (int i = 0; i < influencers.size(); i++) {
+                if (influencers.get(i).getCard().type().equals(InfluenceCard.Type.PHILOSOPHER)) {
+                    return removeAtIndex(i);
+                }
+            }
+            return null;
+        }
+        int getNumPhilosophers() { return numPhilosophers;}
         public List<InfluenceCardState> getList() {return influencers;}
         void clear() {
             numPhilosophers = 0;
@@ -120,10 +134,6 @@ public class PatricianState {
     }
 
     /**
-     * Returns an unmodifiable view of played influence cards for a player on a group.
-     *
-     * @param type   the Patrician group type
-/**
      * Removes and returns a played influence card from a group for a player.
      *
      * @param type    the Patrician group type
@@ -185,6 +195,13 @@ public class PatricianState {
             game.discard(caesarList.removeMin());
             game.discard(cleopatraList.removeMax());
         }
+
+        if (caesarList.getNumPhilosophers()!= cleopatraList.getNumPhilosophers()) {
+            if (caesarList.getNumPhilosophers() > cleopatraList.getNumPhilosophers()) 
+                game.discard(caesarList.removePhilosopher());
+            else
+                game.discard(cleopatraList.removePhilosopher());
+        }
         return winner;
     }
 
@@ -199,7 +216,7 @@ public class PatricianState {
         return removed.stream().map(InfluenceCardState::getCard).toList();
     }
 
-    public void replace(Player player, Type patrician, List<InfluenceCard> replacementCards) {
+    public void replaceInfluence(Player player, Type patrician, List<InfluenceCard> replacementCards) {
         InfluenceList playersInfluence = playedInfluence.get(patrician).get(player);
         playersInfluence.clear();
         replacementCards.forEach(c -> playersInfluence.addCard(c, false));

@@ -40,22 +40,36 @@ paths:
                 properties:
                   status:
                     type: string
-                  playerId:
-                    type: string
-                  deckType:
-                    type: string
                   card:
-                    type: string
-  /game/action/playCard:
+                    $ref: '#/components/schemas/CardDTO'
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /game/action/playaction:
     post:
-      summary: Play a card (Influence/Action)
-      operationId: playCard
+      summary: Play an action
+      operationId: playAction
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
+              $ref: "#/components/schemas/ActionContext"
       responses:
         '200':
           description: Card played response
@@ -90,12 +104,20 @@ paths:
     post:
       summary: Submit initial face-down influence card placements
       operationId: placeInitialInfluence
+      parameters:
+        - name: playerId
+          in: query
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              additionalProperties:
+                type: string
       responses:
         '200':
           description: Initial influence placed response
@@ -182,6 +204,14 @@ components:
           type: integer
         actionDeckCount:
           type: integer
+    PatricianType:
+      type: string
+      enum:
+        - PRAETOR
+        - AEDILE
+        - CONSUL
+        - CENSOR
+        - QUAESTOR
     PatricianBoardEntry:
       type: object
       properties:
@@ -200,3 +230,49 @@ components:
           type: boolean
         type:
           type: string
+    ActionContext:
+      description: Details required for an action card
+      type: object
+      properties:
+        patricianType1:
+          $ref: "#/components/schemas/PatricianType"
+        patricianType2:
+          $ref: "#/components/schemas/PatricianType"
+        cardIndex:
+          type: integer
+        redistributedCardsForType1:
+            type: array
+            items:
+              $ref: '#/components/schemas/InfluenceEntry'
+        redistributedCardsForType2:
+            type: array
+            items:
+              $ref: '#/components/schemas/InfluenceEntry'
+
+    #     private Type patricianType1;
+    # private Type patricianType2;
+    # private int cardIndex;
+    # private List<InfluenceCard> redistributedCardsForType1;
+    # private List<InfluenceCard> redistributedCardsForType2;
+
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO-8601 timestamp of the error
+        message:
+          type: string
+          description: Error message, JSON-escaped
+        status:
+          type: integer
+          description: HTTP status code
+        path:
+          type: string
+          description: API path that failed
+      required:
+        - timestamp
+        - message
+        - status
+        - path
