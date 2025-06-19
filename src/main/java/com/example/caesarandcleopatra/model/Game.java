@@ -1,6 +1,7 @@
 package com.example.caesarandcleopatra.model;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -21,6 +22,28 @@ import static com.example.caesarandcleopatra.model.BustBag.BustPiece;
 public class Game {
     public static long seed = 0;
     private static Random shuffler;
+
+    // Game mode enumeration
+    public enum GameMode {
+        INITIAL_INFLUENCE_PLACEMENT,
+        STANDARD_PLAY
+    }
+
+    // Current game mode
+    private GameMode currentMode;
+    public GameMode getCurrentMode() { return currentMode; }
+
+    // Current player whose turn it is
+    private Player currentPlayer;
+    public Player getCurrentPlayer() { return currentPlayer; }
+    
+    // Track which players have completed initial influence placement
+    private boolean caesarInitialInfluencePlaced = false;
+    private boolean cleopatraInitialInfluencePlaced = false;
+    
+    public boolean hasPlayerPlacedInitialInfluence(Player player) {
+        return player == Player.CAESAR ? caesarInitialInfluencePlaced : cleopatraInitialInfluencePlaced;
+    }
 
     // Encapsulates patrician board and played influence state
     private PatricianState patricianState;
@@ -77,6 +100,11 @@ public class Game {
     public Game(long seed) {
         Game.seed = seed;
         shuffler = new Random(seed);
+        
+        // Initialize game mode and current player
+        currentMode = GameMode.INITIAL_INFLUENCE_PLACEMENT;
+        currentPlayer = Player.CAESAR; // Caesar goes first
+        
         patricianState = new PatricianState(this);
         // PatricianState manages board cards and played influence
         playerHands            = new HashMap<>();
@@ -84,19 +112,7 @@ public class Game {
         playerInfluenceDecks   = generateDecks(InfluenceCard.Type.values(), InfluenceCard.Type::getCount, InfluenceCard::new);
 
         // Initialize each player's starting hand: 5 Influence cards (1-5) and 1 Veto
-        for (Player p : Player.values()) {
-            List<Card> hand = new ArrayList<>();
-            // Influence cards 1-5
-            for (InfluenceCard.Type t : InfluenceCard.Type.values()) {
-                if (t.getValue() > 0) {
-                    String id = t.name().toLowerCase();
-                    hand.add(new InfluenceCard(id, t));
-                }
-            }
-            // Veto card
-            hand.add(new ActionCard(ActionCard.Type.VETO.name(), ActionCard.Type.VETO));
-            playerHands.put(p, hand);
-        }
+        initializeStartingHands();
         discardPile            = new LinkedList<>();
 
         // Initialize bust bag with one of each BustPiece
@@ -110,6 +126,26 @@ public class Game {
                 counts.put(t, 0);
             }
             playerPatricians.put(p, counts);
+        }
+    }
+
+    /**
+     * Initializes the starting hand for each player: 5 Influence cards (1-5) and 1 Veto card.
+     * This method is called during game initialization and when transitioning to standard play.
+     */
+    private void initializeStartingHands() {
+        for (Player p : Player.values()) {
+            List<Card> hand = new ArrayList<>();
+            // Influence cards 1-5
+            for (InfluenceCard.Type t : InfluenceCard.Type.values()) {
+                if (t.getValue() > 0) {
+                    String id = t.name().toLowerCase();
+                    hand.add(new InfluenceCard(id, t));
+                }
+            }
+            // Veto card
+            hand.add(new ActionCard(ActionCard.Type.VETO.name(), ActionCard.Type.VETO));
+            playerHands.put(p, hand);
         }
     }
 
@@ -127,6 +163,7 @@ public class Game {
     // Methods to handle played influence cards
     /**
      * Plays an Influence card for a player against a specified Patrician group.
+     * Behavior depends on the current game mode.
      *
      * @param patricianType the Patrician group type targeted
      * @param player the player playing the card
@@ -134,7 +171,85 @@ public class Game {
      * @param faceUp whether the card is placed face up
      */
     public void playInfluenceCard(PatricianCard.Type patricianType, Player player, InfluenceCard influenceCard, boolean faceUp) {
-        patricianState.addInfluence(patricianType, player, influenceCard, faceUp);
+        // Remove the card from the player's hand
+        List<Card> hand = playerHands.get(player);
+        boolean removed = hand.removeIf(card ->
+            card instanceof InfluenceCard ic &&
+            ic.id().equals(influenceCard.id()) &&
+            ic.type().equals(influenceCard.type()));
+        
+        if (!removed) {
+            throw new IllegalArgumentException("Card not found in player's hand: " + influenceCard.id());
+        }
+        
+        if (currentMode == GameMode.INITIAL_INFLUENCE_PLACEMENT) {
+            // During initial placement, cards are always face down
+            patricianState.addInfluence(patricianType, player, influenceCard, false);
+        } else {
+            // During standard play, honor the faceUp parameter
+            patricianState.addInfluence(patricianType, player, influenceCard, faceUp);
+        }
+    }
+
+    public void setHand(Player p, Card...cards) {
+        playerHands.put(p, Arrays.asList(cards));
+    }
+    public void setHand(Player p, List<Card> cards) {
+        playerHands.put(p, cards);
+    }
+    /**
+     * Finds and returns an InfluenceCard from the player's hand by its ID.
+     *
+     * @param player the player whose hand to search
+     * @param cardId the ID of the card to find
+     * @return the InfluenceCard if found, null otherwise
+     */
+    public InfluenceCard findInfluenceCardInHand(Player player, String cardId) {
+        List<Card> hand = playerHands.get(player);
+        return hand.stream()
+            .filter(card -> card instanceof InfluenceCard)
+            .map(card -> (InfluenceCard) card)
+            .filter(ic -> ic.id().equals(cardId))
+            .findFirst()
+            .orElse(null);
+    }
+
+    /**
+     * Completes initial influence placement for the current player and transitions
+     * to the next player or to standard play mode.
+     */
+    public void completeInitialInfluencePlacement() {
+        if (currentMode != GameMode.INITIAL_INFLUENCE_PLACEMENT) {
+            throw new IllegalStateException("Not in initial influence placement mode");
+        }
+        
+        // Mark current player as having completed initial placement
+        if (currentPlayer == Player.CAESAR) {
+            caesarInitialInfluencePlaced = true;
+        } else {
+            cleopatraInitialInfluencePlaced = true;
+        }
+        
+        // Check if both players have placed their initial influence
+        if (caesarInitialInfluencePlaced && cleopatraInitialInfluencePlaced) {
+            // Both players done - transition to standard play
+            currentMode = GameMode.STANDARD_PLAY;
+            currentPlayer = Player.CAESAR; // Caesar starts standard play
+            
+            // Reset both players' hands to the starting hand for standard play
+            initializeStartingHands();
+        } else {
+            // Switch to the other player for their initial placement
+            currentPlayer = currentPlayer.opponent();
+        }
+    }
+
+    /**
+     * Checks if the current player needs to place initial influence.
+     */
+    public boolean isWaitingForInitialInfluence() {
+        return currentMode == GameMode.INITIAL_INFLUENCE_PLACEMENT &&
+               !hasPlayerPlacedInitialInfluence(currentPlayer);
     }
 
     // Methods for discard pile management

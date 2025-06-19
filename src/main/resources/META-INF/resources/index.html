@@ -4,8 +4,12 @@
     <meta charset="UTF-8">
     <title>Caesar & Cleopatra</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- JQuery CDN for future UI work -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- Local JS/CSS libraries -->
+    <link rel="stylesheet" href="libs/jquery-ui-1.13.3.css">
+    <script src="libs/jquery-3.7.1.min.js"></script>
+    <script src="libs/jquery-ui-1.13.3.min.js"></script>
+    <script src="libs/axios-1.6.8.min.js"></script>
+    <script src="libs/handlebars-4.7.8.min.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
@@ -28,11 +32,81 @@
             padding: 2em;
         }
     </style>
+    <style>
+        .patrician-column {
+            text-align: center;
+        }
+        .patrician-column h3 {
+            margin-top: 0.5em;
+        }
+    </style>
+    <style>
+        .opponent-influence, .player-influence {
+            height: 390px; /* 300px card height + 30% */
+            background: #f0f0f0;
+            margin: 1em 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            border: 2px dashed #ccc;
+            position: relative;
+            overflow: visible;
+        }
+        .droppable-hover {
+            background: #d1ffd1;
+        }
+        
+        /* Multi-card stack styling */
+        .influence-stack {
+            position: relative;
+            width: 100px;
+            height: 300px;
+        }
+        
+        .influence-card {
+            position: absolute;
+            width: 100px;
+            height: 300px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        /* Stacking positions for multiple cards - using 10% of card height (30px) for better overlap */
+        .influence-stack .influence-card:nth-child(1) { transform: translateY(0px) translateX(-12px); z-index: 5; }
+        .influence-stack .influence-card:nth-child(2) { transform: translateY(30px) translateX(-6px); z-index: 4; }
+        .influence-stack .influence-card:nth-child(3) { transform: translateY(60px) translateX(0px); z-index: 3; }
+        .influence-stack .influence-card:nth-child(4) { transform: translateY(90px) translateX(6px); z-index: 2; }
+        .influence-stack .influence-card:nth-child(5) { transform: translateY(120px) translateX(12px); z-index: 1; }
+        
+        /* Hover effects */
+        .influence-stack:hover .influence-card {
+            transform: translateY(0px) translateX(0px) !important;
+            z-index: 10 !important;
+        }
+        
+        .influence-stack .influence-card:hover {
+            transform: translateY(-20px) translateX(0px) scale(1.05) !important;
+            z-index: 15 !important;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+        
+        /* Fan-out effect on stack hover */
+        .influence-stack:hover .influence-card:nth-child(1) { transform: translateY(0px) translateX(-40px); }
+        .influence-stack:hover .influence-card:nth-child(2) { transform: translateY(0px) translateX(-20px); }
+        .influence-stack:hover .influence-card:nth-child(3) { transform: translateY(0px) translateX(0px); }
+        .influence-stack:hover .influence-card:nth-child(4) { transform: translateY(0px) translateX(20px); }
+        .influence-stack:hover .influence-card:nth-child(5) { transform: translateY(0px) translateX(40px); }
+        
+        /* Card count indicator - removed as per requirements */
+    </style>
 </head>
 <body>
     <header>
         <h1>Caesar & Cleopatra</h1>
-        <p>Welcome to the game!</p>
+        <p id="game-status">Welcome to the game!</p>
     </header>
     <main>
         <section id="scoreboard" style="margin-bottom:1.5em;">
@@ -42,10 +116,17 @@
                 <span id="player2-score">Player 2: 0</span>
             </div>
         </section>
+
+        <!-- Submit button for initial influence -->
+        <div id="submit-area" style="text-align:center;margin:1em 0;">
+            <button id="submit-influence" disabled>Submit Initial Influence</button>
+            <button id="reset-game" style="margin-left:10px;">Reset Game</button>
+            <p id="turn-info" style="font-weight:bold;margin:0.5em 0;"></p>
+        </div>
         <section id="patrician-board" style="margin-bottom:1.5em;">
             <h2>Patrician Board</h2>
-            <div id="patrician-board-area">
-                <!-- Patrician board cards will be displayed here -->
+            <div id="patrician-board-area" style="display: flex; justify-content: space-evenly; table-layout: fixed;">
+                <!-- Patrician columns will be rendered here by Handlebars -->
             </div>
         </section>
         <section id="player-hand" style="margin-bottom:1.5em;">
@@ -81,5 +162,342 @@
             </div>
         </section>
     </main>
+    <!-- Handlebars template for patrician columns -->
+    <script id="patrician-column-template" type="text/x-handlebars-template">
+        {{#each patricians}}
+            <div class="patrician-column">
+                <div class="opponent-influence">
+                    {{#if opponentInfluence.length}}
+                        <div class="influence-stack">
+                            {{#each opponentInfluence}}
+                                <img src="cards/{{this}}" alt="Influence" class="influence-card" width="100" height="300">
+                            {{/each}}
+                        </div>
+                    {{/if}}
+                </div>
+                <img src="cards/patrician/{{image}}" alt="{{name}}" width="160" height="480">
+                <div class="player-influence">
+                    {{#if playerInfluence.length}}
+                        <div class="influence-stack">
+                            {{#each playerInfluence}}
+                                <img src="cards/{{this}}" alt="Influence" class="influence-card" width="100" height="300">
+                            {{/each}}
+                        </div>
+                    {{/if}}
+                </div>
+                <h3>{{name}}</h3>
+            </div>
+        {{/each}}
+    </script>
+
+    <!-- Handlebars template for the current player's hand -->
+    <script id="hand-card-template" type="text/x-handlebars-template">
+        {{#each hand}}
+            <img src="cards/{{this}}" alt="Card" width="100" height="300">
+        {{/each}}
+    </script>
+
+    <script>
+        $(function () {
+            // Register Handlebars helper for greater than comparison
+            Handlebars.registerHelper('gt', function(a, b) {
+                return a > b;
+            });
+            
+            function capitalize(str) {
+                return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+            }
+            function cardFileName(type) {
+                return type.toLowerCase() + '.svg';
+            }
+            function makeDraggable($imgs) {
+                $imgs.draggable({
+                    revert: 'invalid',
+                    helper: 'clone',
+                    start: function () {
+                        console.log('Drag started');
+                        $(this).css('opacity', 0.5);
+                    },
+                    stop: function () {
+                        console.log('Drag stopped');
+                        $(this).css('opacity', 1);
+                    }
+                });
+            }
+            function updateSubmitButton() {
+                // Use setTimeout to ensure DOM has been updated
+                setTimeout(function() {
+                    const handCount = $('#hand-area img').length;
+                    const placedCount = $('.player-influence .influence-card').length;
+                    console.log('Hand count:', handCount, 'Placed count:', placedCount);
+                    
+                    // Enable button when all 5 cards are placed (hand is empty)
+                    $('#submit-influence').prop('disabled', handCount !== 0);
+                }, 10);
+            }
+            
+            function createInfluenceStack($container, cards) {
+                if (cards.length === 0) return;
+                
+                const $stack = $('<div class="influence-stack"></div>');
+                
+                cards.forEach(function(cardSrc) {
+                    const $card = $('<img>');
+                    $card.attr('src', 'cards/' + cardSrc);
+                    $card.attr('alt', 'Influence');
+                    $card.attr('width', '100');
+                    $card.attr('height', '300');
+                    $card.addClass('influence-card');
+                    $stack.append($card);
+                });
+                
+                $container.append($stack);
+            }
+
+            function refreshGameState() {
+                axios.get('/game')
+                    .then(({ data }) => {
+                        const current = data.currentPlayer; // "CAESAR" or "CLEOPATRA"
+                        const opponent = current === 'CAESAR' ? 'CLEOPATRA' : 'CAESAR';
+                        const patricianBoard = data.patricianBoard;
+                        const gameMode = data.gameMode;
+                        const waitingForInitialInfluence = data.waitingForInitialInfluence;
+
+                        // Update game status and turn info
+                        if (gameMode === 'INITIAL_INFLUENCE_PLACEMENT') {
+                            $('#game-status').text(`Initial Influence Placement Phase`);
+                            if (waitingForInitialInfluence) {
+                                $('#turn-info').text(`${current}'s turn to place initial influence`);
+                                $('#submit-influence').show();
+                            } else {
+                                $('#turn-info').text(`Waiting for ${current} to place initial influence`);
+                                $('#submit-influence').hide();
+                            }
+                        } else if (gameMode === 'STANDARD_PLAY') {
+                            $('#game-status').text(`Standard Play - ${current}'s turn`);
+                            $('#turn-info').text('');
+                            $('#submit-influence').hide();
+                        }
+
+                        // Store current player for submit action
+                        window.currentPlayer = current;
+                        window.gameMode = gameMode;
+                        window.waitingForInitialInfluence = waitingForInitialInfluence;
+
+                    const patricians = Object.keys(patricianBoard).map(key => {
+                        const entry = patricianBoard[key];
+                        
+                        // Process opponent influence cards - show backs when face down
+                        const oppInf = (entry.influence[opponent] || []).map(i => {
+                            if (i.faceUp) {
+                                return 'influence/' + cardFileName(i.type);
+                            } else {
+                                // Show appropriate card back for opponent
+                                return 'backs/' + opponent.toLowerCase() + '.svg';
+                            }
+                        });
+                        
+                        // Process current player influence cards - show backs when face down
+                        const playerInf = (entry.influence[current] || []).map(i => {
+                            if (i.faceUp) {
+                                return 'influence/' + cardFileName(i.type);
+                            } else {
+                                // Show appropriate card back for current player
+                                return 'backs/' + current.toLowerCase() + '.svg';
+                            }
+                        });
+
+                        return {
+                            name: capitalize(key.toLowerCase()),
+                            image: key.toLowerCase() + '.svg',
+                            opponentInfluence: oppInf,
+                            playerInfluence: playerInf
+                        };
+                        });
+
+                        // Render patrician board
+                        const boardSource = document.getElementById('patrician-column-template').innerHTML;
+                        const boardTemplate = Handlebars.compile(boardSource);
+                        $('#patrician-board-area').html(boardTemplate({ patricians }));
+
+                        // Build and render current player's hand
+                        if (waitingForInitialInfluence && gameMode === 'INITIAL_INFLUENCE_PLACEMENT') {
+                            // During initial influence placement, show the standard starting cards
+                            const handCards = ['influence/one.svg', 'influence/two.svg', 'influence/three.svg', 'influence/four.svg', 'influence/five.svg'];
+                            const handSource = document.getElementById('hand-card-template').innerHTML;
+                            const handTemplate = Handlebars.compile(handSource);
+                            $('#hand-area').html(handTemplate({ hand: handCards }));
+                        } else if (gameMode === 'STANDARD_PLAY') {
+                            // During standard play, show the actual hand from the backend
+                            const handCards = (data.currentPlayerHand || []).map(card => {
+                                if (card.type === 'influence') {
+                                    return 'influence/' + card.id + '.svg';
+                                } else if (card.type === 'action') {
+                                    return 'action/' + card.id.toLowerCase() + '.svg';
+                                }
+                                return 'influence/' + card.id + '.svg'; // Default to influence folder
+                            });
+                            const handSource = document.getElementById('hand-card-template').innerHTML;
+                            const handTemplate = Handlebars.compile(handSource);
+                            $('#hand-area').html(handTemplate({ hand: handCards }));
+                        } else {
+                            // Clear hand if not this player's turn for initial influence
+                            $('#hand-area').empty();
+                        }
+                        
+                        updateSubmitButton();
+
+                        // Enable drag-and-drop for influence cards in hand
+                        makeDraggable($('#hand-area img'));
+                        
+                        // During standard play, also make the hand cards clickable for additional interactions
+                        if (gameMode === 'STANDARD_PLAY') {
+                            $('#hand-area img').css('cursor', 'grab');
+                        }
+
+                        // Make current player's influence zones accept dropped cards
+                        $('.player-influence').droppable({
+                            accept: '#hand-area img',
+                            hoverClass: 'droppable-hover',
+                            drop: function (event, ui) {
+                                console.log('Card dropped');
+                                const $target = $(this);
+                                const $card = $(ui.draggable);
+
+                                // Get or create the influence stack
+                                let $stack = $target.find('.influence-stack');
+                                if ($stack.length === 0) {
+                                    $stack = $('<div class="influence-stack"></div>');
+                                    $target.append($stack);
+                                }
+
+                                // If this is initial influence placement, only allow one card per patrician
+                                if (window.gameMode === 'INITIAL_INFLUENCE_PLACEMENT') {
+                                    // Return existing card to hand if present
+                                    const $existing = $stack.find('.influence-card').first();
+                                    if ($existing.length) {
+                                        console.log('Existing card found, returning to hand');
+                                        $existing.detach().appendTo('#hand-area');
+                                        makeDraggable($existing);
+                                    }
+                                    
+                                    // Clear the stack and add new card
+                                    $stack.empty();
+                                }
+                                // During standard play, just add the card to the stack (no replacement)
+
+                                // Create the new card element
+                                const $newCard = $card.clone();
+                                $newCard.removeClass('ui-draggable ui-draggable-handle')
+                                       .css({ top: '', left: '', position: 'absolute', opacity: '1' })
+                                       .addClass('influence-card');
+
+                                // Add to stack
+                                $stack.append($newCard);
+
+                                // Remove original card from hand
+                                $card.remove();
+
+                                console.log('Calling updateSubmitButton after drop');
+                                updateSubmitButton();
+                            }
+                        });
+     
+                        // Clicking a card in the influence area returns it to the player's hand (only during initial influence placement)
+                        $('#patrician-board-area').off('click', '.player-influence .influence-card').on('click', '.player-influence .influence-card', function (e) {
+                            if (window.gameMode === 'INITIAL_INFLUENCE_PLACEMENT' && window.waitingForInitialInfluence) {
+                                e.stopPropagation();
+                                console.log('Card clicked in influence area');
+                                const $card = $(this);
+                                const $stack = $card.closest('.influence-stack');
+                                
+                                // Create a new draggable card for the hand
+                                const $newCard = $('<img>');
+                                $newCard.attr('src', $card.attr('src'));
+                                $newCard.attr('alt', 'Influence');
+                                $newCard.attr('width', '100');
+                                $newCard.attr('height', '300');
+                                
+                                // Add to hand and make draggable
+                                $('#hand-area').append($newCard);
+                                makeDraggable($newCard);
+                                
+                                // Remove card from stack
+                                $card.remove();
+                                
+                                // Remove empty stack
+                                if ($stack.find('.influence-card').length === 0) {
+                                    $stack.remove();
+                                }
+                                
+                                console.log('Calling updateSubmitButton after click');
+                                updateSubmitButton();
+                            }
+                        });
+                    })
+                    .catch(err => console.error('Failed to load game state', err));
+            }
+
+            // Submit placements when all cards moved
+            $('#submit-influence').on('click', function () {
+                if (!window.waitingForInitialInfluence || window.gameMode !== 'INITIAL_INFLUENCE_PLACEMENT') {
+                    alert('Not your turn or not in initial influence placement mode');
+                    return;
+                }
+
+                const placements = {};
+                $('.patrician-column').each(function () {
+                    const patrician = $(this).find('h3').text().trim().toUpperCase();
+                    const $card = $(this).find('.player-influence .influence-card').first();
+                    if ($card.length) {
+                        const imgSrc = $card.attr('src');
+                        const card = imgSrc.split('/').pop().replace('.svg', '').toUpperCase();
+                        placements[patrician] = card;
+                    }
+                });
+
+                axios.post(`/game/action/placeInitialInfluence?playerId=${window.currentPlayer}`, placements)
+                    .then((response) => {
+                        console.log('Initial influence submitted:', response.data);
+                        
+                        // Refresh the game state to show the next player's turn or transition to standard play
+                        refreshGameState();
+                        
+                        if (response.data.currentMode === 'STANDARD_PLAY') {
+                            alert('Both players have placed initial influence. Game enters standard play mode!');
+                        } else {
+                            alert(`${window.currentPlayer} initial influence submitted. Now ${response.data.currentPlayer}'s turn.`);
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Failed to submit initial influence', err);
+                        if (err.response && err.response.data && err.response.data.error) {
+                            alert('Error: ' + err.response.data.error);
+                        } else {
+                            alert('Failed to submit initial influence');
+                        }
+                    });
+            });
+
+            // Reset game functionality
+            $('#reset-game').on('click', function () {
+                if (confirm('Are you sure you want to reset the game?')) {
+                    axios.post('/game/reset')
+                        .then((response) => {
+                            console.log('Game reset:', response.data);
+                            refreshGameState();
+                            alert('Game has been reset!');
+                        })
+                        .catch(err => {
+                            console.error('Failed to reset game', err);
+                            alert('Failed to reset game');
+                        });
+                }
+            });
+
+            // Initial load
+            refreshGameState();
+        });
+    </script>
 </body>
 </html>

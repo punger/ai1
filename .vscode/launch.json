@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Debug Quarkus App",
+            "request": "attach",
+            "hostName": "localhost",
+            "port": 5005,
+            "projectName": "caesar-and-cleopatra"
+        }
+    ]
+}

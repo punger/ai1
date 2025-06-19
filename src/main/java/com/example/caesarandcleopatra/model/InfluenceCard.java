@@ -1,5 +1,10 @@
 package com.example.caesarandcleopatra.model;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 public record InfluenceCard(String id, Type type) implements Card {
 
     public enum Type {
@@ -32,4 +37,17 @@ public record InfluenceCard(String id, Type type) implements Card {
         return type.getCount();
     }
     public int getValue() {return type.value;}
+
+    public static Card getIcByValue(int v) {
+        return Stream.of(Type.values())
+                    .filter(t -> t.value == v)
+                    .map(t -> new InfluenceCard(t.name(), t))
+                    .findFirst().orElse(null);
+    }
+
+    public static List<Card> getByValue(Integer ... influenceValues) {
+        return Arrays.asList(influenceValues).stream()
+                .map(i -> getIcByValue(i))
+                .collect(Collectors.toList());
+    }
 }

@@ -37,7 +37,7 @@ public class GameResource {
         if (persistentGame == null) {
             persistentGame = new Game();
         }
-        Player current = Player.CAESAR; // TODO: determine actual current player
+        Player current = persistentGame.getCurrentPlayer();
         // Map each card to DTO with id and simple type identifier
         List<CardDTO> currentHand = persistentGame.getPlayerHands().get(current).stream()
             .map(c -> {
@@ -56,14 +56,26 @@ public class GameResource {
         Map<String, PatricianBoardEntry> patricianBoard = new HashMap<>();
         PatricianState patricianState = persistentGame.getPatricianState();
         Map<PatricianCard.Type, Integer> boardState = patricianState.getBoardState();
+        boolean isInitialInfluencePlacement = persistentGame.getCurrentMode() == Game.GameMode.INITIAL_INFLUENCE_PLACEMENT;
+        
         for (var type : PatricianCard.Type.values()) {
             int remaining = boardState.getOrDefault(type, 0);
             Map<Player, List<InfluenceEntry>> influenceMap = new HashMap<>();
             for (Player player : Player.values()) {
                 List<InfluenceCardState> influenceList = patricianState.getPlayedInfluence(type, player);
                 List<InfluenceEntry> entries = new ArrayList<>();
-                for (PatricianState.InfluenceCardState inf : influenceList) {
-                    entries.add(new InfluenceEntry(inf.isFaceUp(), inf.getCard().id()));
+                
+                // During initial influence placement, hide opponent's cards completely
+                if (isInitialInfluencePlacement && player != current) {
+                    // Show only the count of opponent's cards, but hide their details
+                    for (int i = 0; i < influenceList.size(); i++) {
+                        entries.add(new InfluenceEntry(false, "hidden"));
+                    }
+                } else {
+                    // Show current player's cards or all cards during standard play
+                    for (PatricianState.InfluenceCardState inf : influenceList) {
+                        entries.add(new InfluenceEntry(inf.isFaceUp(), inf.getCard().id()));
+                    }
                 }
                 influenceMap.put(player, entries);
             }
@@ -80,7 +92,9 @@ public class GameResource {
         }
         return new GameState(current, 1, currentHand, opponentHandCount,
                              playerPatricianCards, bustBagContents,
-                             deckCounts, patricianBoard);
+                             deckCounts, patricianBoard,
+                             persistentGame.getCurrentMode().toString(),
+                             persistentGame.isWaitingForInitialInfluence());
     }
 
     // POST /api/game/action/placeInitialInfluence - Submits initial face-down influence card placements
@@ -89,18 +103,51 @@ public class GameResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response placeInitialInfluence(
-        @QueryParam("playerId") String playerId, 
-        Map<String, String> influenceCards) 
+        @QueryParam("playerId") String playerId,
+        Map<String, String> influenceCards)
     {
         Player current = resolvePlayer(playerId);
+        
+        // Validate that it's this player's turn during initial placement
+        if (persistentGame.getCurrentMode() != Game.GameMode.INITIAL_INFLUENCE_PLACEMENT) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity("{\"error\":\"Not in initial influence placement mode\"}")
+                .build();
+        }
+        
+        if (persistentGame.getCurrentPlayer() != current) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity("{\"error\":\"Not your turn\"}")
+                .build();
+        }
+        
+        if (persistentGame.hasPlayerPlacedInitialInfluence(current)) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity("{\"error\":\"Player has already placed initial influence\"}")
+                .build();
+        }
+
+        persistentGame.setHand(current, InfluenceCard.getByValue(1, 2, 3, 4, 5));
+        // Place the influence cards
         for (Map.Entry<String, String> entry : influenceCards.entrySet()) {
             String patricianGroupId = entry.getKey();
             String cardId = entry.getValue();
             PatricianCard.Type patricianType = PatricianCard.Type.valueOf(patricianGroupId);
+            
             InfluenceCard cardToPlay = new InfluenceCard(cardId, InfluenceCard.Type.valueOf(cardId));
             persistentGame.playInfluenceCard(patricianType, current, cardToPlay, false);
         }
-        return Response.ok("{\"status\":\"Initial influence placed\"}").build();
+        
+        // Complete this player's initial influence placement
+        persistentGame.completeInitialInfluencePlacement();
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "Initial influence placed");
+        response.put("currentMode", persistentGame.getCurrentMode().toString());
+        response.put("currentPlayer", persistentGame.getCurrentPlayer().toString());
+        response.put("waitingForInitialInfluence", persistentGame.isWaitingForInitialInfluence());
+        
+        return Response.ok(response).build();
     }
 
     // GET /game/draw - Draw a card from a specified deck for a player
@@ -154,6 +201,19 @@ public class GameResource {
         return response;
     }
 
+    // POST /api/game/reset - Reset the game to initial state
+    @POST
+    @Path("/reset")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response resetGame() {
+        persistentGame = new Game();
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "Game reset");
+        response.put("currentMode", persistentGame.getCurrentMode().toString());
+        response.put("currentPlayer", persistentGame.getCurrentPlayer().toString());
+        return Response.ok(response).build();
+    }
+
     // Utility methods
     private Player resolvePlayer(String player) { return Player.valueOf(player.toUpperCase());}
 
@@ -169,7 +229,9 @@ public class GameResource {
         Map<Player, Map<String,Integer>> playerPatricianCards,
         List<String> bustBagContents,
         Map<Player, DeckCount> deckCounts,
-        Map<String, PatricianBoardEntry> patricianBoard) {}
+        Map<String, PatricianBoardEntry> patricianBoard,
+        String gameMode,
+        boolean waitingForInitialInfluence) {}
 
     public static record DeckCount(int influenceDeckCount, int actionDeckCount) {}
 

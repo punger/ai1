@@ -93,4 +93,66 @@ public class GameTest {
         validateInfluence(cardsOf(state.getPlayedInfluence(CONSUL, CLEOPATRA)));
     }
 
+    @Test
+    public void testInitialInfluencePlacementTransition() {
+        Game game = new Game(42); // Use fixed seed for reproducible test
+        
+        // Verify initial state
+        assertEquals(Game.GameMode.INITIAL_INFLUENCE_PLACEMENT, game.getCurrentMode());
+        assertEquals(Player.CAESAR, game.getCurrentPlayer());
+        
+        // Verify starting hands contain the expected cards
+        List<Card> caesarInitialHand = game.getPlayerHands().get(Player.CAESAR);
+        List<Card> cleopatraInitialHand = game.getPlayerHands().get(Player.CLEOPATRA);
+        
+        assertEquals(6, caesarInitialHand.size()); // 5 influence + 1 veto
+        assertEquals(6, cleopatraInitialHand.size()); // 5 influence + 1 veto
+        
+        // Simulate initial influence placement - place one card for each player
+        InfluenceCard caesarCard = game.findInfluenceCardInHand(Player.CAESAR, "one");
+        game.playInfluenceCard(PatricianCard.Type.AEDILE, Player.CAESAR, caesarCard, false);
+        game.completeInitialInfluencePlacement();
+        
+        // Should switch to Cleopatra
+        assertEquals(Game.GameMode.INITIAL_INFLUENCE_PLACEMENT, game.getCurrentMode());
+        assertEquals(Player.CLEOPATRA, game.getCurrentPlayer());
+        
+        // Place Cleopatra's initial influence
+        InfluenceCard cleopatraCard = game.findInfluenceCardInHand(Player.CLEOPATRA, "two");
+        game.playInfluenceCard(PatricianCard.Type.PRAETOR, Player.CLEOPATRA, cleopatraCard, false);
+        game.completeInitialInfluencePlacement();
+        
+        // Should transition to standard play with Caesar as starting player
+        assertEquals(Game.GameMode.STANDARD_PLAY, game.getCurrentMode());
+        assertEquals(Player.CAESAR, game.getCurrentPlayer());
+        
+        // Verify both players have starting hands restored (5 influence + 1 veto)
+        List<Card> caesarStandardHand = game.getPlayerHands().get(Player.CAESAR);
+        List<Card> cleopatraStandardHand = game.getPlayerHands().get(Player.CLEOPATRA);
+        
+        assertEquals(6, caesarStandardHand.size());
+        assertEquals(6, cleopatraStandardHand.size());
+        
+        // Verify the starting hand contains the expected cards
+        long caesarInfluenceCounts = caesarStandardHand.stream()
+            .filter(card -> card instanceof InfluenceCard)
+            .count();
+        long caesarVetoCounts = caesarStandardHand.stream()
+            .filter(card -> card instanceof ActionCard ac && ac.type() == ActionCard.Type.VETO)
+            .count();
+        
+        assertEquals(5, caesarInfluenceCounts);
+        assertEquals(1, caesarVetoCounts);
+        
+        long cleopatraInfluenceCounts = cleopatraStandardHand.stream()
+            .filter(card -> card instanceof InfluenceCard)
+            .count();
+        long cleopatraVetoCounts = cleopatraStandardHand.stream()
+            .filter(card -> card instanceof ActionCard ac && ac.type() == ActionCard.Type.VETO)
+            .count();
+        
+        assertEquals(5, cleopatraInfluenceCounts);
+        assertEquals(1, cleopatraVetoCounts);
+    }
+
 }

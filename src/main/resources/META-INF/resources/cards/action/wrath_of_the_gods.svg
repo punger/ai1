@@ -1,0 +1,26 @@
+<svg width="160" height="480" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="blackGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#424242;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#212121;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <rect width="160" height="480" rx="12" ry="12" fill="url(#blackGradient)" stroke="#000000" stroke-width="3"/>
+  <rect x="8" y="8" width="144" height="464" rx="8" ry="8" fill="none" stroke="#FFFFFF" stroke-width="2" opacity="0.7"/>
+  
+  <rect x="15" y="25" width="130" height="40" rx="5" ry="5" fill="rgba(255,255,255,0.9)"/>
+  <text x="80" y="45" text-anchor="middle" font-family="serif" font-size="12" font-weight="bold" fill="#000000">WRATH OF</text>
+  <text x="80" y="60" text-anchor="middle" font-family="serif" font-size="12" font-weight="bold" fill="#000000">THE GODS</text>
+  
+  <circle cx="80" cy="140" r="40" fill="rgba(255,255,255,0.2)" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="80" y="155" text-anchor="middle" font-family="serif" font-size="40" font-weight="bold" fill="#FFFFFF">?</text>
+  
+  <text x="80" y="210" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#FFFFFF">Discard all played</text>
+  <text x="80" y="230" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#FFFFFF">influence cards</text>
+  <text x="80" y="250" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#FFFFFF">for both players</text>
+  <text x="80" y="270" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#FFFFFF">of specified type</text>
+  
+  <circle cx="80" cy="400" r="25" fill="rgba(255,255,255,0.9)"/>
+  <text x="80" y="408" text-anchor="middle" font-family="sans-serif" font-size="18" font-weight="bold" fill="#000000">1</text>
+</svg>
