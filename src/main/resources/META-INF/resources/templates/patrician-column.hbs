@@ -1,0 +1,24 @@
+{{#each patricians}}
+    <div class="patrician-column">
+        <div class="opponent-influence">
+            {{#if opponentInfluence.length}}
+                <div class="influence-stack">
+                    {{#each opponentInfluence}}
+                        <img src="cards/{{this}}" alt="Influence" class="influence-card" width="100" height="300">
+                    {{/each}}
+                </div>
+            {{/if}}
+        </div>
+        <img src="cards/patrician/{{image}}" alt="{{name}}" width="160" height="480">
+        <div class="player-influence">
+            {{#if playerInfluence.length}}
+                <div class="influence-stack">
+                    {{#each playerInfluence}}
+                        <img src="cards/{{this}}" alt="Influence" class="influence-card" width="100" height="300">
+                    {{/each}}
+                </div>
+            {{/if}}
+        </div>
+        <h3>{{name}}</h3>
+    </div>
+{{/each}}

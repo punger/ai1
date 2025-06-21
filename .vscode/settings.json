@@ -16,5 +16,10 @@
   "java.configuration.updateBuildConfiguration": "interactive",
   "java.test.config": {
         "vmArgs": ["-Djava.util.logging.manager=org.jboss.logmanager.LogManager"]
-}
+},
+"cSpell.words": [
+  "caesarandcleopatra",
+  "quarkus",
+  "resteasy"
+]
 }

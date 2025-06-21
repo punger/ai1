@@ -1,0 +1,91 @@
+/* Base styles */
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f5f5dc;
+    margin: 0;
+    padding: 0;
+}
+header {
+    background: #8b5c2a;
+    color: #fff;
+    padding: 1em;
+    text-align: center;
+}
+main {
+    margin: 2em auto;
+    max-width: 600px;
+    background: #fffbe6;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    padding: 2em;
+}
+
+/* Patrician column styles */
+.patrician-column {
+    text-align: center;
+}
+.patrician-column h3 {
+    margin-top: 0.5em;
+}
+
+/* Influence card styles */
+.opponent-influence, .player-influence {
+    height: 390px; /* 300px card height + 30% */
+    background: #f0f0f0;
+    margin: 1em 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    border: 2px dashed #ccc;
+    position: relative;
+    overflow: visible;
+}
+.droppable-hover {
+    background: #d1ffd1;
+}
+
+/* Multi-card stack styling */
+.influence-stack {
+    position: relative;
+    width: 100px;
+    height: 300px;
+}
+
+.influence-card {
+    position: absolute;
+    width: 100px;
+    height: 300px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Stacking positions for multiple cards - using 10% of card height (30px) for better overlap */
+.influence-stack .influence-card:nth-child(1) { transform: translateY(0px) translateX(-12px); z-index: 5; }
+.influence-stack .influence-card:nth-child(2) { transform: translateY(30px) translateX(-6px); z-index: 4; }
+.influence-stack .influence-card:nth-child(3) { transform: translateY(60px) translateX(0px); z-index: 3; }
+.influence-stack .influence-card:nth-child(4) { transform: translateY(90px) translateX(6px); z-index: 2; }
+.influence-stack .influence-card:nth-child(5) { transform: translateY(120px) translateX(12px); z-index: 1; }
+
+/* Hover effects */
+.influence-stack:hover .influence-card {
+    transform: translateY(0px) translateX(0px) !important;
+    z-index: 10 !important;
+}
+
+.influence-stack .influence-card:hover {
+    transform: translateY(-20px) translateX(0px) scale(1.05) !important;
+    z-index: 15 !important;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+}
+
+/* Fan-out effect on stack hover */
+.influence-stack:hover .influence-card:nth-child(1) { transform: translateY(0px) translateX(-40px); }
+.influence-stack:hover .influence-card:nth-child(2) { transform: translateY(0px) translateX(-20px); }
+.influence-stack:hover .influence-card:nth-child(3) { transform: translateY(0px) translateX(0px); }
+.influence-stack:hover .influence-card:nth-child(4) { transform: translateY(0px) translateX(20px); }
+.influence-stack:hover .influence-card:nth-child(5) { transform: translateY(0px) translateX(40px); }
+
+/* Card count indicator - removed as per requirements */
