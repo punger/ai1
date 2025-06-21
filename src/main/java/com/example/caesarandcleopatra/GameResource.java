@@ -1,6 +1,5 @@
 package com.example.caesarandcleopatra;
 
-import jakarta.inject.Singleton;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;

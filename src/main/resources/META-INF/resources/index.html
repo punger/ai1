@@ -13,21 +13,22 @@
     <script src="libs/handlebars-4.7.8.min.js"></script>
 </head>
 <body>
-    <header>
-        <h1>Caesar & Cleopatra</h1>
-        <p id="game-status">Welcome to the game!</p>
-    </header>
-    <main>
-        <section id="scoreboard" style="margin-bottom:1.5em;">
+    <main class="game-layout">
+        <!-- Header with score -->
+        <header class="game-header">
             <h2>Score</h2>
             <div id="scores">
                 <span id="player1-score">Player 1: 0</span> &nbsp;|&nbsp;
                 <span id="player2-score">Player 2: 0</span>
             </div>
-        </section>
+        </header>
 
-        <!-- Dynamic action area for game phase buttons -->
-        <div id="game-actions" class="game-actions-container">
+        <!-- Left column: Game actions (20% width) -->
+        <section id="game-actions" class="game-actions">
+            <header class="banner-header">
+                <h1>Caesar & Cleopatra</h1>
+                <p id="game-status">Welcome to the game!</p>
+            </header>
             <div id="action-buttons" class="action-buttons">
                 <!-- Dynamic buttons will be rendered here -->
             </div>
@@ -35,42 +36,68 @@
                 <button id="reset-game" class="secondary-button">Reset Game</button>
             </div>
             <p id="turn-info" class="turn-info"></p>
-        </div>
-        <section id="patrician-board" style="margin-bottom:1.5em;">
+        </section>
+
+        <!-- Middle column: Patrician board (50% width) -->
+        <section id="patrician-board" class="patrician-board">
             <h2>Patrician Board</h2>
-            <div id="patrician-board-area" style="display: flex; justify-content: space-evenly; table-layout: fixed;">
+            <div id="patrician-board-area" class="patrician-board-area">
                 <!-- Patrician columns will be rendered here by Handlebars -->
             </div>
         </section>
-        <section id="player-hand" style="margin-bottom:1.5em;">
-            <h2>Your Hand</h2>
-            <div id="hand-area">
-                <!-- Player's hand cards will be displayed here -->
-            </div>
-        </section>
-        <section id="decks-discard-bust" style="display:flex; gap:1em; justify-content:space-between;">
-            <div id="action-deck-area">
-                <h3>Action Deck</h3>
-                <div id="action-deck">
-                    <!-- Action deck cards -->
+
+        <!-- Right column: Player and opponent info (30% width) -->
+        <section id="right-panel" class="right-panel">
+            <!-- Opponent area (upper part) -->
+            <div id="opponent-area" class="opponent-area">
+                <h3>Opponent</h3>
+                <div class="deck-counts">
+                    <div class="deck-count">
+                        <span class="deck-label">Hand:</span>
+                        <span id="opponent-hand-count" class="count">0</span>
+                    </div>
+                    <div class="deck-count">
+                        <span class="deck-label">Action:</span>
+                        <span id="opponent-action-count" class="count">0</span>
+                    </div>
+                    <div class="deck-count">
+                        <span class="deck-label">Influence:</span>
+                        <span id="opponent-influence-count" class="count">0</span>
+                    </div>
                 </div>
             </div>
-            <div id="influence-deck-area">
-                <h3>Influence Deck</h3>
-                <div id="influence-deck">
-                    <!-- Influence deck cards -->
+
+            <!-- Player area (lower part) -->
+            <div id="player-area" class="player-area">
+                <!-- Player decks (upper 20% of player area) -->
+                <div id="player-decks" class="player-decks">
+                    <h4>Your Decks</h4>
+                    <div class="deck-counts-compact">
+                        <div class="deck-count-compact">
+                            <span class="deck-label">Action:</span>
+                            <span id="player-action-count" class="count">0</span>
+                        </div>
+                        <div class="deck-count-compact">
+                            <span class="deck-label">Influence:</span>
+                            <span id="player-influence-count" class="count">0</span>
+                        </div>
+                        <div class="deck-count-compact">
+                            <span class="deck-label">Discard:</span>
+                            <span id="discard-pile-count" class="count">0</span>
+                        </div>
+                        <div class="deck-count-compact">
+                            <span class="deck-label">Bust:</span>
+                            <span id="bust-bag-count" class="count">0</span>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div id="discard-pile-area">
-                <h3>Discard Pile</h3>
-                <div id="discard-pile">
-                    <!-- Discarded cards -->
-                </div>
-            </div>
-            <div id="bust-bag-area">
-                <h3>Bust Bag</h3>
-                <div id="bust-bag">
-                    <!-- Bust tokens -->
+
+                <!-- Player hand (remaining 80% of player area) -->
+                <div id="player-hand" class="player-hand">
+                    <h4>Your Hand</h4>
+                    <div id="hand-area">
+                        <!-- Player's hand cards will be displayed here -->
+                    </div>
                 </div>
             </div>
         </section>

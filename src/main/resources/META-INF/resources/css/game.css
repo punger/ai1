@@ -4,20 +4,210 @@ body {
     background: #f5f5dc;
     margin: 0;
     padding: 0;
+    height: 100vh;
+    overflow: hidden;
 }
-header {
+/* Game layout - columnar */
+.game-layout {
+    display: grid;
+    grid-template-areas:
+        "header header header"
+        "actions patrician right-panel";
+    grid-template-columns: 20% 50% 30%;
+    grid-template-rows: auto 1fr;
+    height: 100vh; /* Full viewport height since no main header */
+    gap: 1em;
+    padding: 1em;
+    background: #fffbe6;
+    margin: 0;
+    max-width: none;
+}
+
+/* Banner header inside left column */
+.banner-header {
     background: #8b5c2a;
     color: #fff;
     padding: 1em;
     text-align: center;
-}
-main {
-    margin: 2em auto;
-    max-width: 600px;
-    background: #fffbe6;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    padding: 2em;
+    margin-bottom: 1em;
+}
+
+.banner-header h1 {
+    margin: 0 0 0.5em 0;
+    font-size: 1.5em;
+}
+
+.banner-header p {
+    margin: 0;
+    font-size: 0.9em;
+}
+
+/* Header area */
+.game-header {
+    grid-area: header;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.7);
+    padding: 0.5em;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.game-header h2 {
+    margin: 0 0 0.5em 0;
+    font-size: 1.2em;
+}
+
+/* Game actions - left column */
+.game-actions {
+    grid-area: actions;
+    background: rgba(255, 255, 255, 0.7);
+    padding: 1em;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* Patrician board - middle column, full height */
+.patrician-board {
+    grid-area: patrician;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    padding: 1em;
+    overflow-y: auto;
+    height: 100%;
+}
+
+.patrician-board h2 {
+    margin: 0 0 1em 0;
+    text-align: center;
+    color: #8b5c2a;
+}
+
+.patrician-board-area {
+    display: flex;
+    justify-content: space-evenly;
+    table-layout: fixed;
+}
+
+/* Right panel - contains opponent and player areas */
+.right-panel {
+    grid-area: right-panel;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 1em;
+}
+
+/* Opponent area - upper part of right panel */
+.opponent-area {
+    background: rgba(255, 200, 200, 0.3);
+    padding: 1em;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    flex: 0 0 auto;
+}
+
+.opponent-area h3 {
+    margin: 0 0 0.5em 0;
+    text-align: center;
+    color: #8b5c2a;
+}
+
+/* Player area - lower part of right panel */
+.player-area {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 0.5em;
+}
+
+/* Player decks - upper 20% of player area */
+.player-decks {
+    background: rgba(200, 255, 200, 0.3);
+    padding: 0.5em;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    flex: 0 0 20%;
+}
+
+.player-decks h4 {
+    margin: 0 0 0.5em 0;
+    text-align: center;
+    color: #8b5c2a;
+    font-size: 1em;
+}
+
+/* Player hand - remaining 80% of player area */
+.player-hand {
+    background: rgba(200, 255, 200, 0.3);
+    padding: 1em;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    overflow-x: auto;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.player-hand h4 {
+    margin: 0 0 0.5em 0;
+    text-align: center;
+    color: #8b5c2a;
+    font-size: 1em;
+}
+
+/* Deck count styles */
+.deck-counts {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+}
+
+.deck-count {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.5);
+    padding: 0.5em;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+/* Compact deck count styles for player area */
+.deck-counts-compact {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.25em;
+}
+
+.deck-count-compact {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.5);
+    padding: 0.25em 0.5em;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+    font-size: 0.85em;
+}
+
+.deck-label {
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.count {
+    font-weight: bold;
+    color: #8b5c2a;
+    background: #fff;
+    padding: 0.2em 0.5em;
+    border-radius: 3px;
+    border: 1px solid #ddd;
+    min-width: 20px;
+    text-align: center;
 }
 
 /* Patrician column styles */
@@ -88,16 +278,7 @@ main {
 
 /* Card count indicator - removed as per requirements */
 
-/* Game actions area styling */
-.game-actions-container {
-    text-align: center;
-    margin: 1.5em 0;
-    padding: 1em;
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 8px;
-    border: 1px solid #ddd;
-}
-
+/* Action buttons styling */
 .action-buttons {
     margin-bottom: 1em;
 }

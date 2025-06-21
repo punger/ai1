@@ -124,10 +124,27 @@ window.GameCore = {
                     // Clear hand if not this player's turn for initial influence
                     $('#hand-area').empty();
                 }
+
+                // Update deck counts
+                self.updateDeckCounts(data, current, opponent);
                 
                 window.GameUtils.updateSubmitButton();
             })
             .catch(err => console.error('Failed to load game state', err));
+    },
+
+    updateDeckCounts: function(data, current, opponent) {
+        // Update player deck counts
+        const playerHand = data.currentPlayerHand || [];
+        $('#player-action-count').text(data.playerActionDeckSize || 0);
+        $('#player-influence-count').text(data.playerInfluenceDeckSize || 0);
+        $('#discard-pile-count').text(data.discardPileSize || 0);
+        $('#bust-bag-count').text(data.bustBagSize || 0);
+
+        // Update opponent deck counts (these would come from the backend)
+        $('#opponent-hand-count').text(data.opponentHandSize || 0);
+        $('#opponent-action-count').text(data.opponentActionDeckSize || 0);
+        $('#opponent-influence-count').text(data.opponentInfluenceDeckSize || 0);
     },
 
     renderHand: function(handCards) {
@@ -295,6 +312,28 @@ window.GameCore = {
                         console.error('Failed to reset game', err);
                         alert('Failed to reset game');
                     });
+            }
+        });
+
+        // Global mouse wheel handler for patrician board scrolling
+        $(document).on('wheel', function(e) {
+            const $patricianBoard = $('.patrician-board');
+            if ($patricianBoard.length) {
+                // Get the scroll element (the patrician board container)
+                const scrollElement = $patricianBoard[0];
+                
+                // Check if the element is scrollable
+                if (scrollElement.scrollHeight > scrollElement.clientHeight) {
+                    // Calculate scroll amount (deltaY is negative for scroll up, positive for scroll down)
+                    const scrollAmount = e.originalEvent.deltaY;
+                    
+                    // Scroll the patrician board
+                    scrollElement.scrollTop += scrollAmount;
+                    
+                    // Prevent default browser scroll behavior
+                    e.preventDefault();
+                    return false;
+                }
             }
         });
     },
