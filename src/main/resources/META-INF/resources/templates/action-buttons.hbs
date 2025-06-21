@@ -1,0 +1,5 @@
+{{#each buttons}}
+    <button id="{{id}}" class="{{cssClass}}" {{#if disabled}}disabled{{/if}} {{#if dataAttributes}}{{#each dataAttributes}}data-{{@key}}="{{this}}" {{/each}}{{/if}}>
+        {{text}}
+    </button>
+{{/each}}

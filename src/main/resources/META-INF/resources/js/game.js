@@ -10,6 +10,22 @@ window.GameCore = {
         return $.get(templatePath);
     },
 
+    renderActionButtons: function(buttonConfigs) {
+        const self = this;
+        self.loadTemplate('templates/action-buttons.hbs')
+            .then(function(templateSource) {
+                const buttonTemplate = Handlebars.compile(templateSource);
+                $('#action-buttons').html(buttonTemplate({ buttons: buttonConfigs }));
+                
+                // Re-bind event handlers for new buttons
+                self.bindActionButtonEvents();
+            });
+    },
+
+    clearActionButtons: function() {
+        $('#action-buttons').empty();
+    },
+
     refreshGameState: function() {
         const self = this;
         axios.get('/game')
@@ -25,15 +41,22 @@ window.GameCore = {
                     $('#game-status').text(`Initial Influence Placement Phase`);
                     if (waitingForInitialInfluence) {
                         $('#turn-info').text(`${current}'s turn to place initial influence`);
-                        $('#submit-influence').show();
+                        // Show submit initial influence button
+                        self.renderActionButtons([{
+                            id: 'submit-influence',
+                            text: 'Submit Initial Influence',
+                            cssClass: 'primary-button',
+                            disabled: true
+                        }]);
                     } else {
                         $('#turn-info').text(`Waiting for ${current} to place initial influence`);
-                        $('#submit-influence').hide();
+                        self.clearActionButtons();
                     }
                 } else if (gameMode === 'STANDARD_PLAY') {
                     $('#game-status').text(`Standard Play - ${current}'s turn`);
                     $('#turn-info').text('');
-                    $('#submit-influence').hide();
+                    // Future: Add standard play action buttons here
+                    self.clearActionButtons();
                 }
 
                 // Store current player for submit action
@@ -78,6 +101,7 @@ window.GameCore = {
                         const boardTemplate = Handlebars.compile(templateSource);
                         $('#patrician-board-area').html(boardTemplate({ patricians }));
                         self.setupDragAndDrop();
+                        self.setupInfluenceStackHover();
                     });
 
                 // Build and render current player's hand
@@ -204,11 +228,82 @@ window.GameCore = {
         });
     },
 
+    setupInfluenceStackHover: function() {
+        // Enhanced hover behavior for influence stacks
+        // Use event delegation to handle dynamically created stacks
+        $('#patrician-board-area').off('mousemove.stackhover mouseleave.stackhover', '.influence-stack');
+        
+        $('#patrician-board-area').on('mousemove.stackhover', '.influence-stack', function(e) {
+            const $stack = $(this);
+            const $cards = $stack.find('.influence-card');
+            
+            if ($cards.length <= 1) return; // No need for special behavior with single card
+            
+            const stackOffset = $stack.offset();
+            const stackHeight = $stack.height();
+            const relativeY = e.pageY - stackOffset.top;
+            const normalizedY = Math.max(0, Math.min(1, relativeY / stackHeight));
+            
+            // Determine which card should be on top based on mouse position
+            const cardIndex = Math.floor(normalizedY * $cards.length);
+            const clampedIndex = Math.max(0, Math.min($cards.length - 1, cardIndex));
+            
+            // Reset all cards to their default state
+            $cards.each(function(index) {
+                const defaultZIndex = $cards.length - index;
+                $(this).css({
+                    'z-index': defaultZIndex,
+                    'box-shadow': '0 2px 4px rgba(0,0,0,0.2)'
+                });
+            });
+            
+            // Bring the target card to the front with enhanced shadow
+            $cards.eq(clampedIndex).css({
+                'z-index': 25,
+                'box-shadow': '0 4px 8px rgba(0,0,0,0.3)'
+            });
+        });
+        
+        $('#patrician-board-area').on('mouseleave.stackhover', '.influence-stack', function() {
+            const $stack = $(this);
+            const $cards = $stack.find('.influence-card');
+            
+            // Reset all cards to their default state when mouse leaves
+            $cards.each(function(index) {
+                const defaultZIndex = $cards.length - index;
+                $(this).css({
+                    'z-index': defaultZIndex,
+                    'box-shadow': '0 2px 4px rgba(0,0,0,0.2)'
+                });
+            });
+        });
+    },
+
     bindEventHandlers: function() {
         const self = this;
         
-        // Submit placements when all cards moved
-        $('#submit-influence').on('click', function () {
+        // Reset game functionality (persistent button)
+        $('#reset-game').on('click', function () {
+            if (confirm('Are you sure you want to reset the game?')) {
+                axios.post('/game/reset')
+                    .then((response) => {
+                        console.log('Game reset:', response.data);
+                        self.refreshGameState();
+                        alert('Game has been reset!');
+                    })
+                    .catch(err => {
+                        console.error('Failed to reset game', err);
+                        alert('Failed to reset game');
+                    });
+            }
+        });
+    },
+
+    bindActionButtonEvents: function() {
+        const self = this;
+        
+        // Handle submit initial influence
+        $(document).off('click', '#submit-influence').on('click', '#submit-influence', function () {
             if (!window.waitingForInitialInfluence || window.gameMode !== 'INITIAL_INFLUENCE_PLACEMENT') {
                 alert('Not your turn or not in initial influence placement mode');
                 return;
@@ -248,20 +343,9 @@ window.GameCore = {
                 });
         });
 
-        // Reset game functionality
-        $('#reset-game').on('click', function () {
-            if (confirm('Are you sure you want to reset the game?')) {
-                axios.post('/game/reset')
-                    .then((response) => {
-                        console.log('Game reset:', response.data);
-                        self.refreshGameState();
-                        alert('Game has been reset!');
-                    })
-                    .catch(err => {
-                        console.error('Failed to reset game', err);
-                        alert('Failed to reset game');
-                    });
-            }
-        });
+        // Future: Add other action button handlers here
+        // Example:
+        // $(document).off('click', '#play-action-card').on('click', '#play-action-card', function() { ... });
+        // $(document).off('click', '#end-turn').on('click', '#end-turn', function() { ... });
     }
 };

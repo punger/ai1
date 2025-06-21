@@ -26,11 +26,15 @@
             </div>
         </section>
 
-        <!-- Submit button for initial influence -->
-        <div id="submit-area" style="text-align:center;margin:1em 0;">
-            <button id="submit-influence" disabled>Submit Initial Influence</button>
-            <button id="reset-game" style="margin-left:10px;">Reset Game</button>
-            <p id="turn-info" style="font-weight:bold;margin:0.5em 0;"></p>
+        <!-- Dynamic action area for game phase buttons -->
+        <div id="game-actions" class="game-actions-container">
+            <div id="action-buttons" class="action-buttons">
+                <!-- Dynamic buttons will be rendered here -->
+            </div>
+            <div id="persistent-buttons" class="persistent-buttons">
+                <button id="reset-game" class="secondary-button">Reset Game</button>
+            </div>
+            <p id="turn-info" class="turn-info"></p>
         </div>
         <section id="patrician-board" style="margin-bottom:1.5em;">
             <h2>Patrician Board</h2>

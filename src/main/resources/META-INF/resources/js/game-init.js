@@ -36,7 +36,10 @@ $(function () {
             console.log('Hand count:', handCount, 'Placed count:', placedCount);
             
             // Enable button when all 5 cards are placed (hand is empty)
-            $('#submit-influence').prop('disabled', handCount !== 0);
+            const $submitButton = $('#submit-influence');
+            if ($submitButton.length) {
+                $submitButton.prop('disabled', handCount !== 0);
+            }
         }, 10);
     }
     

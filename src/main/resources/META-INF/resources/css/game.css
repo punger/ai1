@@ -56,36 +56,137 @@ main {
     position: absolute;
     width: 100px;
     height: 300px;
-    transition: all 0.3s ease;
+    transition: z-index 0.1s ease;
     cursor: pointer;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-/* Stacking positions for multiple cards - using 10% of card height (30px) for better overlap */
-.influence-stack .influence-card:nth-child(1) { transform: translateY(0px) translateX(-12px); z-index: 5; }
-.influence-stack .influence-card:nth-child(2) { transform: translateY(30px) translateX(-6px); z-index: 4; }
-.influence-stack .influence-card:nth-child(3) { transform: translateY(60px) translateX(0px); z-index: 3; }
-.influence-stack .influence-card:nth-child(4) { transform: translateY(90px) translateX(6px); z-index: 2; }
-.influence-stack .influence-card:nth-child(5) { transform: translateY(120px) translateX(12px); z-index: 1; }
-
-/* Hover effects */
-.influence-stack:hover .influence-card {
-    transform: translateY(0px) translateX(0px) !important;
-    z-index: 10 !important;
+/* Column stacking positions - cards stacked vertically with minimal offset */
+.influence-stack .influence-card:nth-child(1) {
+    transform: translateY(0px);
+    z-index: 5;
+}
+.influence-stack .influence-card:nth-child(2) {
+    transform: translateY(25px);
+    z-index: 4;
+}
+.influence-stack .influence-card:nth-child(3) {
+    transform: translateY(50px);
+    z-index: 3;
+}
+.influence-stack .influence-card:nth-child(4) {
+    transform: translateY(75px);
+    z-index: 2;
+}
+.influence-stack .influence-card:nth-child(5) {
+    transform: translateY(100px);
+    z-index: 1;
 }
 
-.influence-stack .influence-card:hover {
-    transform: translateY(-20px) translateX(0px) scale(1.05) !important;
-    z-index: 15 !important;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-}
-
-/* Fan-out effect on stack hover */
-.influence-stack:hover .influence-card:nth-child(1) { transform: translateY(0px) translateX(-40px); }
-.influence-stack:hover .influence-card:nth-child(2) { transform: translateY(0px) translateX(-20px); }
-.influence-stack:hover .influence-card:nth-child(3) { transform: translateY(0px) translateX(0px); }
-.influence-stack:hover .influence-card:nth-child(4) { transform: translateY(0px) translateX(20px); }
-.influence-stack:hover .influence-card:nth-child(5) { transform: translateY(0px) translateX(40px); }
+/* Hover effects are now handled by JavaScript for more precise control */
 
 /* Card count indicator - removed as per requirements */
+
+/* Game actions area styling */
+.game-actions-container {
+    text-align: center;
+    margin: 1.5em 0;
+    padding: 1em;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.action-buttons {
+    margin-bottom: 1em;
+}
+
+.action-buttons button {
+    margin: 0.25em 0.5em;
+    padding: 0.75em 1.5em;
+    font-size: 1em;
+    font-weight: bold;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* Primary action buttons (main game actions) */
+.primary-button {
+    background: #4CAF50;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.primary-button:hover:not(:disabled) {
+    background: #45a049;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+.primary-button:disabled {
+    background: #cccccc;
+    color: #666666;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Warning action buttons (destructive actions) */
+.warning-button {
+    background: #ff9800;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.warning-button:hover:not(:disabled) {
+    background: #e68900;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+/* Danger action buttons (very destructive actions) */
+.danger-button {
+    background: #f44336;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.danger-button:hover:not(:disabled) {
+    background: #da190b;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+.persistent-buttons {
+    margin-top: 0.5em;
+    padding-top: 0.5em;
+    border-top: 1px solid #eee;
+}
+
+/* Secondary action buttons (utility actions) */
+.secondary-button {
+    background: #6c757d;
+    color: white;
+    padding: 0.5em 1em;
+    font-size: 0.9em;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 0.25em;
+    transition: all 0.2s ease;
+}
+
+.secondary-button:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+}
+
+.turn-info {
+    font-weight: bold;
+    margin: 0.75em 0 0 0;
+    color: #2c3e50;
+    font-size: 1.1em;
+}
