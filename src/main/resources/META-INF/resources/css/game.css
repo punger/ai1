@@ -89,8 +89,11 @@ body {
 
 .patrician-board-area {
     display: flex;
+    flex-direction: row;
     justify-content: space-evenly;
-    table-layout: fixed;
+    align-items: flex-start;
+    min-height: 100%;
+    padding-bottom: 2em;
 }
 
 /* Right panel - contains opponent and player areas */
@@ -213,6 +216,8 @@ body {
 /* Patrician column styles */
 .patrician-column {
     text-align: center;
+    flex: 0 0 auto;
+    margin: 0 0.5em;
 }
 .patrician-column h3 {
     margin-top: 0.5em;
@@ -246,10 +251,11 @@ body {
     position: absolute;
     width: 100px;
     height: 300px;
-    transition: z-index 0.1s ease;
+    transition: all 0.2s ease;
     cursor: pointer;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    opacity: 1;
 }
 
 /* Column stacking positions - cards stacked vertically with minimal offset */

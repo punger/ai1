@@ -29,13 +29,31 @@ public class Game {
         STANDARD_PLAY
     }
 
+    // Turn phase enumeration for standard play
+    public enum TurnPhase {
+        FIRST_CARD_SELECTION,     // Choose first card (influence face-down or action)
+        SECOND_CARD_SELECTION,    // Optionally choose second card (influence face-up or action)
+        VOTE_OF_CONFIDENCE,       // Vote of confidence occurs
+        DRAW_PHASE               // Draw to 6 cards from chosen deck
+    }
+
     // Current game mode
     private GameMode currentMode;
     public GameMode getCurrentMode() { return currentMode; }
 
+    // Current turn phase (only relevant during STANDARD_PLAY)
+    private TurnPhase currentTurnPhase;
+    public TurnPhase getCurrentTurnPhase() { return currentTurnPhase; }
+
     // Current player whose turn it is
     private Player currentPlayer;
     public Player getCurrentPlayer() { return currentPlayer; }
+
+    // Turn state tracking
+    private int cardsPlayedThisTurn = 0;
+    private boolean actionCardPlayedThisTurn = false;
+    private ActionCard pendingActionCard = null;
+    private ActionContext pendingActionContext = null;
     
     // Track which players have completed initial influence placement
     private boolean caesarInitialInfluencePlaced = false;
@@ -104,6 +122,7 @@ public class Game {
         // Initialize game mode and current player
         currentMode = GameMode.INITIAL_INFLUENCE_PLACEMENT;
         currentPlayer = Player.CAESAR; // Caesar goes first
+        currentTurnPhase = TurnPhase.FIRST_CARD_SELECTION; // Default phase
         
         patricianState = new PatricianState(this);
         // PatricianState manages board cards and played influence
@@ -235,6 +254,13 @@ public class Game {
             // Both players done - transition to standard play
             currentMode = GameMode.STANDARD_PLAY;
             currentPlayer = Player.CAESAR; // Caesar starts standard play
+            currentTurnPhase = TurnPhase.FIRST_CARD_SELECTION;
+            
+            // Reset turn state
+            cardsPlayedThisTurn = 0;
+            actionCardPlayedThisTurn = false;
+            pendingActionCard = null;
+            pendingActionContext = null;
             
             // Reset both players' hands to the starting hand for standard play
             initializeStartingHands();
@@ -352,5 +378,249 @@ public class Game {
         });
         // Draw a replacement card for the vetoing player
         draw(p, drewFromInfluence);
+    }
+
+    // ========== TURN MECHANICS ==========
+
+    /**
+     * Plays a card during the current turn phase.
+     * For influence cards, the face-up behavior depends on the phase.
+     * For action cards, they are executed immediately.
+     *
+     * @param cardId the ID of the card to play
+     * @param patricianType the patrician type to target (for influence cards)
+     * @param actionContext additional context for action cards (optional)
+     * @return true if the card was successfully played
+     */
+    public boolean playCardInTurn(String cardId, PatricianCard.Type patricianType, ActionContext actionContext) {
+        if (currentMode != GameMode.STANDARD_PLAY) {
+            throw new IllegalStateException("Not in standard play mode");
+        }
+        
+        if (currentTurnPhase == TurnPhase.VOTE_OF_CONFIDENCE || currentTurnPhase == TurnPhase.DRAW_PHASE) {
+            throw new IllegalStateException("Cannot play cards during " + currentTurnPhase + " phase");
+        }
+        
+        // Find the card in the current player's hand
+        List<Card> hand = playerHands.get(currentPlayer);
+        Card cardToPlay = hand.stream()
+            .filter(card -> card.id().equals(cardId))
+            .findFirst()
+            .orElse(null);
+            
+        if (cardToPlay == null) {
+            return false; // Card not found in hand
+        }
+        
+        // Check if we can play another card this turn
+        if (cardsPlayedThisTurn >= 2) {
+            return false; // Already played maximum cards this turn
+        }
+        
+        // Handle influence cards
+        if (cardToPlay instanceof InfluenceCard influenceCard) {
+            return playInfluenceCardInTurn(influenceCard, patricianType);
+        }
+        
+        // Handle action cards
+        if (cardToPlay instanceof ActionCard actionCard) {
+            return playActionCardInTurn(actionCard, actionContext);
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Plays an influence card during the turn.
+     * First phase: face down
+     * Second phase: face up
+     */
+    private boolean playInfluenceCardInTurn(InfluenceCard influenceCard, PatricianCard.Type patricianType) {
+        boolean faceUp = (currentTurnPhase == TurnPhase.SECOND_CARD_SELECTION);
+        
+        // Check if we can add influence to this patrician type
+        if (!patricianState.addInfluence(patricianType, currentPlayer, influenceCard, faceUp)) {
+            return false; // Cannot add more influence cards to this patrician
+        }
+        
+        // Remove card from hand
+        playerHands.get(currentPlayer).removeIf(card ->
+            card instanceof InfluenceCard ic && ic.id().equals(influenceCard.id()));
+        
+        cardsPlayedThisTurn++;
+        
+        // Advance to next phase if this was the first card
+        if (currentTurnPhase == TurnPhase.FIRST_CARD_SELECTION) {
+            currentTurnPhase = TurnPhase.SECOND_CARD_SELECTION;
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Plays an action card during the turn.
+     */
+    private boolean playActionCardInTurn(ActionCard actionCard, ActionContext actionContext) {
+        // Check if we already played an action card this turn
+        if (actionCardPlayedThisTurn) {
+            return false; // Can only play one action card per turn
+        }
+        
+        // Store the action card and context for potential veto
+        pendingActionCard = actionCard;
+        pendingActionContext = actionContext;
+        
+        // Remove card from hand
+        playerHands.get(currentPlayer).removeIf(card ->
+            card instanceof ActionCard ac && ac.id().equals(actionCard.id()));
+        
+        cardsPlayedThisTurn++;
+        actionCardPlayedThisTurn = true;
+        
+        // Execute the action immediately (can be vetoed by opponent)
+        if (actionContext != null) {
+            actionCard.apply(this, currentPlayer, actionContext);
+        }
+        
+        // Discard the action card
+        discard(actionCard);
+        
+        // Advance to next phase if this was the first card
+        if (currentTurnPhase == TurnPhase.FIRST_CARD_SELECTION) {
+            currentTurnPhase = TurnPhase.SECOND_CARD_SELECTION;
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Skips the second card selection phase and moves to vote of confidence.
+     */
+    public void skipSecondCardSelection() {
+        if (currentMode != GameMode.STANDARD_PLAY) {
+            throw new IllegalStateException("Not in standard play mode");
+        }
+        
+        if (currentTurnPhase != TurnPhase.SECOND_CARD_SELECTION) {
+            throw new IllegalStateException("Can only skip during second card selection phase");
+        }
+        
+        currentTurnPhase = TurnPhase.VOTE_OF_CONFIDENCE;
+    }
+    
+    /**
+     * Advances to the vote of confidence phase.
+     * This is called automatically after playing cards or when skipping second card.
+     */
+    public void proceedToVoteOfConfidence() {
+        if (currentMode != GameMode.STANDARD_PLAY) {
+            throw new IllegalStateException("Not in standard play mode");
+        }
+        
+        currentTurnPhase = TurnPhase.VOTE_OF_CONFIDENCE;
+    }
+    
+    /**
+     * Executes a vote of confidence for the specified patrician type.
+     *
+     * @param patricianType the patrician type to vote on
+     * @return the winner of the vote, or null if tie
+     */
+    public Player executeVoteOfConfidence(PatricianCard.Type patricianType) {
+        if (currentMode != GameMode.STANDARD_PLAY) {
+            throw new IllegalStateException("Not in standard play mode");
+        }
+        
+        if (currentTurnPhase != TurnPhase.VOTE_OF_CONFIDENCE) {
+            throw new IllegalStateException("Not in vote of confidence phase");
+        }
+        
+        Player winner = resolveVoteOfConfidence(patricianType);
+        
+        // Advance to draw phase
+        currentTurnPhase = TurnPhase.DRAW_PHASE;
+        
+        return winner;
+    }
+    
+    /**
+     * Draws cards to fill hand to 6 cards from the specified deck type.
+     *
+     * @param fromInfluenceDeck true to draw from influence deck, false for action deck
+     */
+    public void drawToHandLimit(boolean fromInfluenceDeck) {
+        if (currentMode != GameMode.STANDARD_PLAY) {
+            throw new IllegalStateException("Not in standard play mode");
+        }
+        
+        if (currentTurnPhase != TurnPhase.DRAW_PHASE) {
+            throw new IllegalStateException("Not in draw phase");
+        }
+        
+        // Draw cards until hand is full or deck is empty
+        List<Card> hand = playerHands.get(currentPlayer);
+        while (hand.size() < MAX_HAND_SIZE) {
+            Card drawn = draw(currentPlayer, fromInfluenceDeck);
+            if (drawn == null) {
+                // Deck is empty, cannot draw more
+                break;
+            }
+        }
+        
+        // End the turn
+        endTurn();
+    }
+    
+    /**
+     * Ends the current player's turn and switches to the opponent.
+     */
+    private void endTurn() {
+        // Reset turn state
+        cardsPlayedThisTurn = 0;
+        actionCardPlayedThisTurn = false;
+        pendingActionCard = null;
+        pendingActionContext = null;
+        
+        // Switch to opponent
+        currentPlayer = currentPlayer.opponent();
+        currentTurnPhase = TurnPhase.FIRST_CARD_SELECTION;
+    }
+    
+    /**
+     * Checks if the current player can play more cards this turn.
+     */
+    public boolean canPlayMoreCards() {
+        return currentMode == GameMode.STANDARD_PLAY &&
+               (currentTurnPhase == TurnPhase.FIRST_CARD_SELECTION ||
+                currentTurnPhase == TurnPhase.SECOND_CARD_SELECTION) &&
+               cardsPlayedThisTurn < 2;
+    }
+    
+    /**
+     * Gets the number of cards played by the current player this turn.
+     */
+    public int getCardsPlayedThisTurn() {
+        return cardsPlayedThisTurn;
+    }
+    
+    /**
+     * Checks if an action card was played this turn.
+     */
+    public boolean wasActionCardPlayedThisTurn() {
+        return actionCardPlayedThisTurn;
+    }
+    
+    /**
+     * Gets the pending action card (for veto purposes).
+     */
+    public ActionCard getPendingActionCard() {
+        return pendingActionCard;
+    }
+    
+    /**
+     * Gets the pending action context (for veto purposes).
+     */
+    public ActionContext getPendingActionContext() {
+        return pendingActionContext;
     }
 }

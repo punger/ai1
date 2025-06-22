@@ -14,7 +14,11 @@
             {{#if playerInfluence.length}}
                 <div class="influence-stack">
                     {{#each playerInfluence}}
-                        <img src="cards/{{this}}" alt="Influence" class="influence-card" width="100" height="300">
+                        {{#if this.src}}
+                            <img src="cards/{{this.src}}" alt="Influence" class="influence-card" width="100" height="300" data-face-up="{{this.faceUp}}" {{#if this.actualCard}}data-actual-card="cards/{{this.actualCard}}"{{/if}}>
+                        {{else}}
+                            <img src="cards/{{this}}" alt="Influence" class="influence-card" width="100" height="300">
+                        {{/if}}
                     {{/each}}
                 </div>
             {{/if}}

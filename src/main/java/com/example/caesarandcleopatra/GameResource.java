@@ -93,7 +93,11 @@ public class GameResource {
                              playerPatricianCards, bustBagContents,
                              deckCounts, patricianBoard,
                              persistentGame.getCurrentMode().toString(),
-                             persistentGame.isWaitingForInitialInfluence());
+                             persistentGame.isWaitingForInitialInfluence(),
+                             persistentGame.getCurrentMode() == Game.GameMode.STANDARD_PLAY ?
+                                 persistentGame.getCurrentTurnPhase().toString() : null,
+                             persistentGame.getCardsPlayedThisTurn(),
+                             persistentGame.canPlayMoreCards());
     }
 
     // POST /api/game/action/placeInitialInfluence - Submits initial face-down influence card placements
@@ -178,26 +182,111 @@ public class GameResource {
         return Response.ok(response).build();
     }
 
-// POST /game/action/playCard - Play a card (Influence/Action)
+    // POST /game/action/proceedToVoteOfConfidence - Move directly to vote of confidence phase
     @POST
-    @Path("/action/playAction")
+    @Path("/action/proceedToVoteOfConfidence")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Map<String, Object> playCard(Map<String, Object> playRequest) {
-        // Example: extract parameters from playRequest as needed
-        // String playerId = (String) playRequest.get("playerId");
-        // String cardId = (String) playRequest.get("cardId");
-        // String target = (String) playRequest.get("target");
-        // Implement game logic here, e.g. persistentGame.playCard(...);
-
-        // For now, just return a stub response
-        Map<String, Object> details = new HashMap<>();
-        details.put("received", playRequest);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "card played");
-        response.put("details", details);
-        return response;
+    public Response proceedToVoteOfConfidence(Map<String, Object> request) {
+        try {
+            String playerId = (String) request.get("playerId");
+            Player player = resolvePlayer(playerId);
+            
+            // Validate it's the player's turn
+            if (persistentGame.getCurrentPlayer() != player) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\":\"Not your turn\"}")
+                    .build();
+            }
+            
+            persistentGame.skipSecondCardSelection();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "Proceeded to vote of confidence");
+            response.put("turnPhase", persistentGame.getCurrentTurnPhase().toString());
+            
+            return Response.ok(response).build();
+            
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity("{\"error\":\"" + e.getMessage() + "\"}")
+                .build();
+        }
+    }
+    
+    // POST /game/action/voteOfConfidence - Execute vote of confidence
+    @POST
+    @Path("/action/voteOfConfidence")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response executeVoteOfConfidence(Map<String, Object> request) {
+        try {
+            String playerId = (String) request.get("playerId");
+            String patricianTypeStr = (String) request.get("patricianType");
+            
+            Player player = resolvePlayer(playerId);
+            PatricianCard.Type patricianType = PatricianCard.Type.valueOf(patricianTypeStr.toUpperCase());
+            
+            // Validate it's the player's turn
+            if (persistentGame.getCurrentPlayer() != player) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\":\"Not your turn\"}")
+                    .build();
+            }
+            
+            Player winner = persistentGame.executeVoteOfConfidence(patricianType);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "Vote of confidence executed");
+            response.put("winner", winner != null ? winner.toString() : null);
+            response.put("turnPhase", persistentGame.getCurrentTurnPhase().toString());
+            
+            return Response.ok(response).build();
+            
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity("{\"error\":\"" + e.getMessage() + "\"}")
+                .build();
+        }
+    }
+    
+    // POST /game/action/drawCards - Draw cards to hand limit
+    @POST
+    @Path("/action/drawCards")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response drawCards(Map<String, Object> request) {
+        try {
+            String playerId = (String) request.get("playerId");
+            Boolean fromInfluenceDeck = (Boolean) request.get("fromInfluenceDeck");
+            
+            Player player = resolvePlayer(playerId);
+            
+            // Validate it's the player's turn
+            if (persistentGame.getCurrentPlayer() != player) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\":\"Not your turn\"}")
+                    .build();
+            }
+            
+            if (fromInfluenceDeck == null) {
+                fromInfluenceDeck = true; // Default to influence deck
+            }
+            
+            persistentGame.drawToHandLimit(fromInfluenceDeck);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "Cards drawn, turn ended");
+            response.put("newCurrentPlayer", persistentGame.getCurrentPlayer().toString());
+            response.put("turnPhase", persistentGame.getCurrentTurnPhase().toString());
+            
+            return Response.ok(response).build();
+            
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity("{\"error\":\"" + e.getMessage() + "\"}")
+                .build();
+        }
     }
 
     // POST /api/game/reset - Reset the game to initial state
@@ -230,7 +319,10 @@ public class GameResource {
         Map<Player, DeckCount> deckCounts,
         Map<String, PatricianBoardEntry> patricianBoard,
         String gameMode,
-        boolean waitingForInitialInfluence) {}
+        boolean waitingForInitialInfluence,
+        String turnPhase,
+        int cardsPlayedThisTurn,
+        boolean canPlayMoreCards) {}
 
     public static record DeckCount(int influenceDeckCount, int actionDeckCount) {}
 
@@ -249,4 +341,128 @@ public class GameResource {
     public static record PatricianBoardEntry(int remaining, Map<Player, List<InfluenceEntry>> influence) {}
 
     public static record InfluenceEntry(boolean faceUp, String type) {}
+    
+    public static record CardAssignment(String influenceCardId, String patricianType) {}
+    
+    // POST /game/action/playInfluenceCard - Play influence cards with face up/down positioning
+    @POST
+    @Path("/action/playInfluenceCard")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response playInfluenceCard(Map<String, Object> request) {
+        try {
+            String playerId = (String) request.get("playerId");
+            Map<String, Object> faceDownAssignmentMap = (Map<String, Object>) request.get("faceDownAssignment");
+            Map<String, Object> faceUpAssignmentMap = (Map<String, Object>) request.get("faceUpAssignment");
+            
+            Player player = resolvePlayer(playerId);
+            
+            // Validate it's the player's turn during standard play
+            if (persistentGame.getCurrentMode() != Game.GameMode.STANDARD_PLAY) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\":\"Can only play influence cards during standard play\"}")
+                    .build();
+            }
+            
+            if (persistentGame.getCurrentPlayer() != player) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\":\"Not your turn\"}")
+                    .build();
+            }
+            
+            // Parse face down assignment (required)
+            if (faceDownAssignmentMap == null) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\":\"Face down card assignment is required\"}")
+                    .build();
+            }
+            
+            String faceDownCardId = (String) faceDownAssignmentMap.get("influenceCardId");
+            String faceDownPatricianType = (String) faceDownAssignmentMap.get("patricianType");
+            
+            PatricianCard.Type faceDownPatrician = PatricianCard.Type.valueOf(faceDownPatricianType.toUpperCase());
+            
+            // Play the face down card using turn mechanics
+            boolean success = persistentGame.playCardInTurn(faceDownCardId, faceDownPatrician, null);
+            if (!success) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\":\"Cannot play face down card: " + faceDownCardId + "\"}")
+                    .build();
+            }
+            
+            // Parse face up assignment (optional)
+            if (faceUpAssignmentMap != null) {
+                String faceUpCardId = (String) faceUpAssignmentMap.get("influenceCardId");
+                String faceUpPatricianType = (String) faceUpAssignmentMap.get("patricianType");
+                
+                PatricianCard.Type faceUpPatrician = PatricianCard.Type.valueOf(faceUpPatricianType.toUpperCase());
+                
+                // Play the face up card using turn mechanics
+                boolean faceUpSuccess = persistentGame.playCardInTurn(faceUpCardId, faceUpPatrician, null);
+                if (!faceUpSuccess) {
+                    return Response.status(Response.Status.BAD_REQUEST)
+                        .entity("{\"error\":\"Cannot play face up card: " + faceUpCardId + "\"}")
+                        .build();
+                }
+            }
+            
+            // Return the updated game state
+            return Response.ok(getGame()).build();
+            
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity("{\"error\":\"" + e.getMessage() + "\"}")
+                .build();
+        }
+    }
+    
+    // POST /game/action/playActionCard - Play action card with custom effect
+    @POST
+    @Path("/action/playActionCard")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response playActionCard(Map<String, Object> request) {
+        try {
+            String playerId = (String) request.get("playerId");
+            String actionCardName = (String) request.get("actionCardName");
+            Map<String, Object> actionEffectData = (Map<String, Object>) request.get("actionEffect");
+            
+            Player player = resolvePlayer(playerId);
+            
+            // Validate it's the player's turn during standard play
+            if (persistentGame.getCurrentMode() != Game.GameMode.STANDARD_PLAY) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\":\"Can only play action cards during standard play\"}")
+                    .build();
+            }
+            
+            if (persistentGame.getCurrentPlayer() != player) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\":\"Not your turn\"}")
+                    .build();
+            }
+            
+            // Create ActionEffect from the provided data
+            ActionEffect customEffect = (game, effectPlayer, context) -> {
+                // The UI provides the specific logic for the action card effect
+                // This is a placeholder - the actual effect logic should be provided by the UI
+                if (actionEffectData != null) {
+                    // Apply custom effect logic here based on actionEffectData
+                    // For now, we'll just log that a custom action was applied
+                    System.out.println("Custom action effect applied for " + actionCardName);
+                }
+            };
+            
+            // Apply the custom effect directly to the game
+            customEffect.apply(persistentGame, player, null);
+            
+            // Return the updated game state
+            return Response.ok(getGame()).build();
+            
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity("{\"error\":\"" + e.getMessage() + "\"}")
+                .build();
+        }
+    }
 }

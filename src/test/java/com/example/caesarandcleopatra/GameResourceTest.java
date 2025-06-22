@@ -122,5 +122,145 @@ public class GameResourceTest {
         String finalGameStateJson = mapper.writeValueAsString(finalGameState);
         System.out.println("\nFinal Game State JSON:\n" + finalGameStateJson);
     }
-   
+    
+    @Test
+    public void testPlayInfluenceCardAPI() throws Exception {
+        GameResource gameResource = new GameResource();
+        
+        // Complete initial influence placement to get to standard play
+        setupStandardPlay(gameResource);
+        
+        // Get Caesar's hand to find influence cards
+        var gameState = gameResource.getGame();
+        String firstCardId = gameState.currentPlayerHand().stream()
+            .filter(card -> "influence".equals(card.type()))
+            .findFirst()
+            .map(card -> card.id())
+            .orElse(null);
+        
+        String secondCardId = gameState.currentPlayerHand().stream()
+            .filter(card -> "influence".equals(card.type()))
+            .skip(1)
+            .findFirst()
+            .map(card -> card.id())
+            .orElse(null);
+        
+        // Test playing influence cards with new API
+        Map<String, Object> playRequest = new HashMap<>();
+        playRequest.put("playerId", "CAESAR");
+        
+        // Face down assignment (required)
+        Map<String, Object> faceDownAssignment = new HashMap<>();
+        faceDownAssignment.put("influenceCardId", firstCardId);
+        faceDownAssignment.put("patricianType", "AEDILE");
+        playRequest.put("faceDownAssignment", faceDownAssignment);
+        
+        // Face up assignment (optional)
+        Map<String, Object> faceUpAssignment = new HashMap<>();
+        faceUpAssignment.put("influenceCardId", secondCardId);
+        faceUpAssignment.put("patricianType", "PRAETOR");
+        playRequest.put("faceUpAssignment", faceUpAssignment);
+        
+        Response response = gameResource.playInfluenceCard(playRequest);
+        
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+        
+        System.out.println("\n=== playInfluenceCard Response ===");
+        System.out.println("Status Code: " + response.getStatus());
+        
+        if (response.getStatus() == 200) {
+            var updatedGameState = (GameResource.GameState) response.getEntity();
+            String responseJson = mapper.writeValueAsString(updatedGameState);
+            System.out.println("Updated Game State: " + responseJson);
+        }
+    }
+    
+    @Test
+    public void testPlayActionCardAPI() throws Exception {
+        GameResource gameResource = new GameResource();
+        
+        // Complete initial influence placement to get to standard play
+        setupStandardPlay(gameResource);
+        
+        // Test playing action card with new API
+        Map<String, Object> playRequest = new HashMap<>();
+        playRequest.put("playerId", "CAESAR");
+        playRequest.put("actionCardName", "VETO");
+        
+        // Create action effect data
+        Map<String, Object> actionEffect = new HashMap<>();
+        actionEffect.put("type", "VETO");
+        actionEffect.put("description", "Negates opponent's last action");
+        playRequest.put("actionEffect", actionEffect);
+        
+        Response response = gameResource.playActionCard(playRequest);
+        
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+        
+        System.out.println("\n=== playActionCard Response ===");
+        System.out.println("Status Code: " + response.getStatus());
+        
+        if (response.getStatus() == 200) {
+            var updatedGameState = (GameResource.GameState) response.getEntity();
+            String responseJson = mapper.writeValueAsString(updatedGameState);
+            System.out.println("Updated Game State: " + responseJson);
+        }
+    }
+    
+    @Test
+    public void testPlayInfluenceCardFaceDownOnly() throws Exception {
+        GameResource gameResource = new GameResource();
+        
+        // Complete initial influence placement to get to standard play
+        setupStandardPlay(gameResource);
+        
+        // Get one influence card from Caesar's hand
+        var gameState = gameResource.getGame();
+        String cardId = gameState.currentPlayerHand().stream()
+            .filter(card -> "influence".equals(card.type()))
+            .findFirst()
+            .map(card -> card.id())
+            .orElse(null);
+        
+        // Test playing only face down card (no face up)
+        Map<String, Object> playRequest = new HashMap<>();
+        playRequest.put("playerId", "CAESAR");
+        
+        Map<String, Object> faceDownAssignment = new HashMap<>();
+        faceDownAssignment.put("influenceCardId", cardId);
+        faceDownAssignment.put("patricianType", "CONSUL");
+        playRequest.put("faceDownAssignment", faceDownAssignment);
+        // No faceUpAssignment
+        
+        Response response = gameResource.playInfluenceCard(playRequest);
+        
+        System.out.println("\n=== playInfluenceCard (Face Down Only) Response ===");
+        System.out.println("Status Code: " + response.getStatus());
+        
+        // Should succeed with just face down assignment
+        assert response.getStatus() == 200 : "Should succeed with only face down assignment";
+    }
+    
+    private void setupStandardPlay(GameResource gameResource) {
+        // Complete initial influence placement for both players
+        Map<String, String> caesarInfluence = new HashMap<>();
+        caesarInfluence.put("AEDILE", "ONE");
+        caesarInfluence.put("QUAESTOR", "TWO");
+        caesarInfluence.put("PRAETOR", "THREE");
+        caesarInfluence.put("CONSUL", "FOUR");
+        caesarInfluence.put("CENSOR", "FIVE");
+        
+        gameResource.placeInitialInfluence("CAESAR", caesarInfluence);
+        
+        Map<String, String> cleopatraInfluence = new HashMap<>();
+        cleopatraInfluence.put("AEDILE", "ONE");
+        cleopatraInfluence.put("QUAESTOR", "TWO");
+        cleopatraInfluence.put("PRAETOR", "THREE");
+        cleopatraInfluence.put("CONSUL", "FOUR");
+        cleopatraInfluence.put("CENSOR", "FIVE");
+        
+        gameResource.placeInitialInfluence("CLEOPATRA", cleopatraInfluence);
+    }
 }
